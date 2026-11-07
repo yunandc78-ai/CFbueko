@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🍰 Bolu Bu Eko - Cashflow Manager</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ==========================================
+       SIDEBAR NAVIGATION
+       ========================================== -->
+  <aside id="appSidebar">
+    <div class="sidebar-header">
+      <div class="brand-icon-wrapper">🍰</div>
+      <div class="brand-details">
+        <h1 id="sidebarBrandName">Bolu Bu Eko</h1>
+        <span class="badge-tagline">Cashflow Management</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Menu Utama</div>
+
+      <a href="#dashboard" class="nav-item active" data-view="dashboard">
+        <span class="nav-icon">📊</span>
+        <span>Dashboard</span>
+      </a>
+
+      <a href="#income" class="nav-item" data-view="income">
+        <span class="nav-icon">💰</span>
+        <span>Pemasukan</span>
+      </a>
+
+      <a href="#expense" class="nav-item" data-view="expense">
+        <span class="nav-icon">💸</span>
+        <span>Pengeluaran</span>
+      </a>
+
+      <a href="#products" class="nav-item" data-view="products">
+        <span class="nav-icon">🧁</span>
+        <span>Produk & Harga</span>
+      </a>
+
+      <div class="nav-section-title">Laporan & Analisis</div>
+
+      <a href="#reports" class="nav-item" data-view="reports">
+        <span class="nav-icon">📑</span>
+        <span>Laporan Keuangan</span>
+      </a>
+
+      <div class="nav-section-title">Sistem</div>
+
+      <a href="#settings" class="nav-item" data-view="settings">
+        <span class="nav-icon">⚙️</span>
+        <span>Pengaturan</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button type="button" class="theme-toggle-btn" id="themeToggleBtn">
+        <span id="themeToggleLabel">Mode Gelap</span>
+        <span id="themeToggleIcon">🌙</span>
+      </button>
+      <div class="text-center text-muted small" style="font-size: 0.72rem;">
+        &copy; 2026 Bolu Bu Eko v1.0
+      </div>
+    </div>
+  </aside>
+
+  <!-- ==========================================
+       MAIN CONTENT WRAPPER
+       ========================================== -->
+  <div id="mainContentWrapper">
+
+    <!-- Top Header Bar -->
+    <header class="top-header">
+      <div class="header-left">
+        <button type="button" class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Buka Menu">
+          ☰
+        </button>
+        <div class="header-title" id="brandHeaderTitle">
+          🍰 Bolu Bu Eko <small class="text-muted d-none d-md-inline" style="font-size:0.85rem; font-weight:normal;">- Cashflow Manager</small>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="header-date-badge" id="headerDateDisplay">
+          <span>📅</span>
+          <span id="currentDateText">Hari ini</span>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" onclick="app.openIncomeModal()">
+          <span>+</span> Pemasukan
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="app.openExpenseModal()">
+          <span>+</span> Pengeluaran
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Views Container -->
+    <main class="main-content">
+
+      <!-- ==========================================
+           1. DASHBOARD VIEW
+           ========================================== -->
+      <section id="view-dashboard" class="view-panel active">
+        <div class="page-header-block">
+          <div>
+            <h2 class="page-title">Ringkasan Cashflow Bakery</h2>
+            <p class="page-subtitle">Pantau kesehatan arus kas operasional toko bolu secara berkala</p>
+          </div>
+          <div>
+            <span class="badge badge-light" style="font-size:0.85rem; padding: 0.4rem 0.8rem;">
+              Periode: <strong>Bulan Berjalan</strong>
+            </span>
+          </div>
+        </div>
+
+        <!-- Unusual Expense Alert Box -->
+        <div id="unusualExpenseAlertBox" style="display: none;"></div>
+
+        <!-- 3 Primary Stat Cards -->
+        <div class="summary-cards-grid">
+          <!-- Total Income -->
+          <div class="stat-card stat-card-income">
+            <div class="stat-card-top">
+              <span class="stat-label">Total Pemasukan (Bulan Ini)</span>
+              <div class="stat-icon stat-icon-income">💰</div>
+            </div>
+            <div class="summary-value text-income" id="dashTotalIncome">Rp 0</div>
+            <div class="stat-card-substats">
+              <span>Hari Ini: <strong id="dashTodayIncome">Rp 0</strong></span>
+              <span>Minggu Ini: <strong id="dashWeekIncome">Rp 0</strong></span>
+            </div>
+          </div>
+
+          <!-- Total Expense -->
+          <div class="stat-card stat-card-expense">
+            <div class="stat-card-top">
+              <span class="stat-label">Total Pengeluaran (Bulan Ini)</span>
+              <div class="stat-icon stat-icon-expense">💸</div>
+            </div>
+            <div class="summary-value text-expense" id="dashTotalExpense">Rp 0</div>
+            <div class="stat-card-substats">
+              <span>Hari Ini: <strong id="dashTodayExpense">Rp 0</strong></span>
+              <span>Minggu Ini: <strong id="dashWeekExpense">Rp 0</strong></span>
+            </div>
+          </div>
+
+          <!-- Net Profit / Cashflow -->
+          <div class="stat-card stat-card-profit">
+            <div class="stat-card-top">
+              <span class="stat-label">Saldo / Keuntungan Bersih</span>
+              <div class="stat-icon stat-icon-profit">📈</div>
+            </div>
+            <div class="summary-value text-profit" id="dashNetProfit">Rp 0</div>
+            <div class="stat-card-substats">
+              <span>Hari Ini: <strong id="dashTodayProfit">Rp 0</strong></span>
+              <span>Minggu Ini: <strong id="dashWeekProfit">Rp 0</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Grid (Cashflow Bar Chart + Donut Chart) -->
+        <div class="dashboard-grid-two-col">
+          <!-- Monthly Cashflow Canvas Chart -->
+          <div class="card-panel">
+            <div class="card-panel-header">
+              <h3 class="card-panel-title">
+                <span>📊</span> Tren Cashflow Bulanan (6 Bulan Terakhir)
+              </h3>
+              <small class="text-muted">Canvas API</small>
+            </div>
+            <div class="chart-container-box">
+              <canvas id="cashflowCanvas" class="chart-canvas"></canvas>
+            </div>
+          </div>
+
+          <!-- Expense Breakdown Donut Chart -->
+          <div class="card-panel">
+            <div class="card-panel-header">
+              <h3 class="card-panel-title">
+                <span>🥧</span> Komposisi Beban Pengeluaran
+              </h3>
+              <small class="text-muted">Bulan Ini</small>
+            </div>
+            <div class="donut-chart-layout">
+              <div class="donut-canvas-wrapper">
+                <canvas id="expenseDonutCanvas" class="chart-canvas"></canvas>
+              </div>
+              <div id="expenseDonutLegend"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Grid: Top Products + Recent Activity -->
+        <div class="dashboard-grid-two-col">
+          <!-- Top 5 Best Selling Products -->
+          <div class="card-panel">
+            <div class="card-panel-header">
+              <h3 class="card-panel-title">
+                <span>🧁</span> Top 5 Produk Terlaris
+              </h3>
+              <button type="button" class="btn btn-outline-primary btn-xs" onclick="app.navigate('products')">
+                Lihat Semua Produk &rarr;
+              </button>
+            </div>
+            <div id="topProductsContainer"></div>
+          </div>
+
+          <!-- Recent Transactions Timeline -->
+          <div class="card-panel">
+            <div class="card-panel-header">
+              <h3 class="card-panel-title">
+                <span>⏱️</span> Aktivitas Transaksi Terakhir
+              </h3>
+              <button type="button" class="btn btn-outline-secondary btn-xs" onclick="app.navigate('income')">
+                Semua Transaksi &rarr;
+              </button>
+            </div>
+            <div id="recentActivityList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           2. INCOME VIEW
+           ========================================== -->
+      <section id="view-income" class="view-panel">
+        <div class="page-header-block">
+          <div>
+            <h2 class="page-title">Pemasukan Kas & Penjualan</h2>
+            <p class="page-subtitle">Kelola seluruh transaksi pendapatan dari penjualan bolu dan kue</p>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="app.openIncomeModal()">
+            <span>+</span> Catat Pemasukan Baru
+          </button>
+        </div>
+
+        <!-- Quick Add Section for Favorites -->
+        <div class="quick-add-section">
+          <div class="form-label" style="margin-bottom: 0.5rem; color: var(--color-text-secondary);">
+            ⚡ Akses Cepat Produk Favorit (Klik untuk Catat Penjualan):
+          </div>
+          <div class="quick-add-grid" id="quickAddProductsContainer"></div>
+        </div>
+
+        <!-- Filters & Search Bar -->
+        <div class="filter-card">
+          <div class="filter-left-group">
+            <div class="search-input-wrapper">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="incomeSearchInput" class="form-control form-control-search" placeholder="Cari nama bolu, keterangan...">
+            </div>
+
+            <select id="incomePeriodFilter" class="form-select" style="max-width: 170px;">
+              <option value="all">Semua Waktu</option>
+              <option value="today">Hari Ini</option>
+              <option value="week">7 Hari Terakhir</option>
+              <option value="month" selected>Bulan Ini</option>
+              <option value="lastMonth">Bulan Lalu</option>
+            </select>
+
+            <select id="incomeCategoryFilter" class="form-select" style="max-width: 170px;">
+              <option value="Semua">Semua Kategori</option>
+            </select>
+
+            <select id="incomePaymentMethodFilter" class="form-select" style="max-width: 150px;">
+              <option value="Semua">Semua Pembayaran</option>
+              <option value="Tunai">Tunai</option>
+              <option value="Transfer">Transfer</option>
+              <option value="QRIS">QRIS</option>
+            </select>
+          </div>
+
+          <div class="filter-right-stats">
+            <span class="badge badge-light" id="incomeFilteredCount">0 Transaksi</span>
+            <span>Total: <strong class="text-income font-monospace" id="incomeFilteredTotal">Rp 0</strong></span>
+          </div>
+        </div>
+
+        <!-- Income Data Table -->
+        <div class="table-card">
+          <div class="table-responsive">
+            <table class="app-table">
+              <thead>
+                <tr>
+                  <th style="width: 80px;">No. Trx</th>
+                  <th style="width: 110px;">Tanggal</th>
+                  <th>Produk / Penjualan</th>
+                  <th>Kategori</th>
+                  <th class="text-center" style="width: 70px;">Jumlah</th>
+                  <th class="text-end" style="width: 120px;">Harga Satuan</th>
+                  <th class="text-end" style="width: 130px;">Total</th>
+                  <th class="text-center" style="width: 100px;">Metode</th>
+                  <th class="text-center" style="width: 90px;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="incomeTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           3. EXPENSES VIEW
+           ========================================== -->
+      <section id="view-expense" class="view-panel">
+        <div class="page-header-block">
+          <div>
+            <h2 class="page-title">Pengeluaran & Beban Operasional</h2>
+            <p class="page-subtitle">Pencatatan biaya bahan baku, kemasan, operasional, dan pengeluaran toko</p>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn btn-outline-secondary" onclick="app.openRecurringManagerModal()">
+              🔄 Kelola Biaya Rutin
+            </button>
+            <button type="button" class="btn btn-danger" onclick="app.openExpenseModal()">
+              <span>+</span> Catat Pengeluaran Baru
+            </button>
+          </div>
+        </div>
+
+        <!-- Recurring Expenses Prompt Banner -->
+        <div id="recurringPromptContainer"></div>
+
+        <!-- Filters & Search Bar -->
+        <div class="filter-card">
+          <div class="filter-left-group">
+            <div class="search-input-wrapper">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="expenseSearchInput" class="form-control form-control-search" placeholder="Cari deskripsi, suplier, keterangan...">
+            </div>
+
+            <select id="expensePeriodFilter" class="form-select" style="max-width: 170px;">
+              <option value="all">Semua Waktu</option>
+              <option value="today">Hari Ini</option>
+              <option value="week">7 Hari Terakhir</option>
+              <option value="month" selected>Bulan Ini</option>
+              <option value="lastMonth">Bulan Lalu</option>
+            </select>
+
+            <select id="expenseCategoryFilter" class="form-select" style="max-width: 180px;">
+              <option value="Semua">Semua Kategori</option>
+            </select>
+
+            <select id="expensePaymentMethodFilter" class="form-select" style="max-width: 150px;">
+              <option value="Semua">Semua Pembayaran</option>
+              <option value="Tunai">Tunai</option>
+              <option value="Transfer">Transfer</option>
+              <option value="QRIS">QRIS</option>
+            </select>
+          </div>
+
+          <div class="filter-right-stats">
+            <span class="badge badge-light" id="expenseFilteredCount">0 Transaksi</span>
+            <span>Total: <strong class="text-expense font-monospace" id="expenseFilteredTotal">Rp 0</strong></span>
+          </div>
+        </div>
+
+        <!-- Expense Data Table -->
+        <div class="table-card">
+          <div class="table-responsive">
+            <table class="app-table">
+              <thead>
+                <tr>
+                  <th style="width: 80px;">No. Trx</th>
+                  <th style="width: 110px;">Tanggal</th>
+                  <th>Deskripsi Pengeluaran</th>
+                  <th>Kategori Beban</th>
+                  <th class="text-end" style="width: 140px;">Jumlah Nominal</th>
+                  <th class="text-center" style="width: 100px;">Metode</th>
+                  <th class="text-center" style="width: 90px;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="expenseTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           4. PRODUCTS & PRICES VIEW
+           ========================================== -->
+      <section id="view-products" class="view-panel">
+        <div class="page-header-block">
+          <div>
+            <h2 class="page-title">Manajemen Produk Bakery & Harga</h2>
+            <p class="page-subtitle">Katalog produk bolu, penetapan harga jual, HPP, dan analisis margin keuntungan</p>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="app.openProductModal()">
+            <span>+</span> Tambah Produk Baru
+          </button>
+        </div>
+
+        <!-- Stats & Filter Bar -->
+        <div class="filter-card">
+          <div class="filter-left-group">
+            <div class="search-input-wrapper">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="productSearchInput" class="form-control form-control-search" placeholder="Cari nama varian bolu...">
+            </div>
+
+            <select id="productCategoryFilter" class="form-select" style="max-width: 200px;">
+              <option value="Semua">Semua Kategori Bolu</option>
+            </select>
+          </div>
+
+          <div class="filter-right-stats">
+            <span class="badge badge-category" id="prodTotalCount">0 Produk</span>
+            <span class="badge badge-success" id="prodAvgMargin">Rata-rata Margin: 0%</span>
+          </div>
+        </div>
+
+        <!-- Products Table -->
+        <div class="table-card">
+          <div class="table-responsive">
+            <table class="app-table">
+              <thead>
+                <tr>
+                  <th class="text-center" style="width: 50px;">Fav</th>
+                  <th>Nama Produk</th>
+                  <th>Kategori</th>
+                  <th class="text-end" style="width: 130px;">Harga Jual</th>
+                  <th class="text-end" style="width: 130px;">HPP (Pokok)</th>
+                  <th class="text-end" style="width: 160px;">Margin Keuntungan</th>
+                  <th class="text-center" style="width: 100px;">Status</th>
+                  <th class="text-center" style="width: 90px;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="productsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           5. REPORTS VIEW
+           ========================================== -->
+      <section id="view-reports" class="view-panel">
+        <div class="page-header-block">
+          <div>
+            <h2 class="page-title">Laporan Keuangan & Akuntansi</h2>
+            <p class="page-subtitle">Laporan Laba Rugi, Arus Kas (Cash Flow), dan grafik perbandingan</p>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn btn-outline-secondary" onclick="app.reports.exportToCSV()">
+              📥 Export CSV / Excel
+            </button>
+            <button type="button" class="btn btn-primary" onclick="app.reports.printReport()">
+              🖨️ Cetak Laporan (Print)
+            </button>
+          </div>
+        </div>
+
+        <!-- Report Period & Controls Bar -->
+        <div class="report-controls-bar">
+          <div class="report-controls-row">
+            <!-- Report Type Segmented Selector -->
+            <div class="segmented-control">
+              <button type="button" class="segmented-btn report-type-btn active" data-type="labarugi" onclick="app.switchReportType('labarugi')">
+                📑 Laporan Laba Rugi
+              </button>
+              <button type="button" class="segmented-btn report-type-btn" data-type="aruskas" onclick="app.switchReportType('aruskas')">
+                🌊 Laporan Arus Kas
+              </button>
+            </div>
+
+            <!-- Period Preset Buttons -->
+            <div class="segmented-control">
+              <button type="button" class="segmented-btn report-period-btn active" data-period="thisMonth" onclick="app.setReportPeriod('thisMonth')">
+                Bulan Ini
+              </button>
+              <button type="button" class="segmented-btn report-period-btn" data-period="lastMonth" onclick="app.setReportPeriod('lastMonth')">
+                Bulan Lalu
+              </button>
+              <button type="button" class="segmented-btn report-period-btn" data-period="thisYear" onclick="app.setReportPeriod('thisYear')">
+                Tahun Ini
+              </button>
+              <button type="button" class="segmented-btn report-period-btn" data-period="custom" onclick="app.setReportPeriod('custom')">
+                Pilih Periode
+              </button>
+            </div>
+          </div>
+
+          <!-- Custom Date Range (hidden by default) -->
+          <div class="report-controls-row" id="reportCustomDateRange" style="display: none;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span class="form-label" style="margin: 0;">Dari:</span>
+              <input type="date" id="reportStartDate" class="form-control" style="width: auto;">
+              <span class="form-label" style="margin: 0;">Sampai:</span>
+              <input type="date" id="reportEndDate" class="form-control" style="width: auto;">
+              <button type="button" class="btn btn-primary btn-sm" onclick="app.setReportPeriod('custom')">Terapkan Filter</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Comparison Line Chart Card -->
+        <div class="card-panel mb-3" id="reportComparisonChartCard">
+          <div class="card-panel-header">
+            <h3 class="card-panel-title">
+              <span>📈</span> Grafik Perbandingan Pemasukan, Pengeluaran & Laba Bersih
+            </h3>
+            <small class="text-muted">Tren 6 Bulan Terakhir</small>
+          </div>
+          <div class="chart-container-box">
+            <canvas id="reportComparisonCanvas" class="chart-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Rendered Report Document View -->
+        <div id="reportDocumentContainer"></div>
+      </section>
+
+      <!-- ==========================================
+           6. SETTINGS VIEW
+           ========================================== -->
+      <section id="view-settings" class="view-panel">
+        <div class="page-header-block">
+          <div>
+            <h2 class="page-title">Pengaturan Aplikasi & Backup</h2>
+            <p class="page-subtitle">Kelola profil usaha toko bolu, preferensi tema, dan data sistem</p>
+          </div>
+        </div>
+
+        <div class="settings-grid">
+          <!-- Profile Settings -->
+          <div class="card-panel">
+            <h3 class="card-panel-title mb-3">
+              <span>🏪</span> Profil Usaha Bakery
+            </h3>
+            <form id="settingsProfileForm">
+              <div class="form-group">
+                <label class="form-label">Nama Bakery / Toko</label>
+                <input type="text" id="settingsStoreName" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Slogan / Tagline Usaha</label>
+                <input type="text" id="settingsTagline" class="form-control">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Nama Pemilik Usaha</label>
+                <input type="text" id="settingsOwner" class="form-control">
+              </div>
+              <div class="form-row-grid">
+                <div class="form-group">
+                  <label class="form-label">No. Telepon / WhatsApp</label>
+                  <input type="text" id="settingsPhone" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Email Usaha</label>
+                  <input type="email" id="settingsEmail" class="form-control">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Alamat Lengkap Outlet Dapur</label>
+                <textarea id="settingsAddress" class="form-control" rows="2"></textarea>
+              </div>
+
+              <hr style="border:none; border-top: 1px solid var(--color-border); margin: 1.25rem 0;">
+
+              <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem;">Preferensi Sistem</h4>
+              <div class="form-group">
+                <label class="form-label">Batas Peringatan Pengeluaran Tidak Biasa (Rp)</label>
+                <input type="number" id="settingsThreshold" class="form-control" step="100000" min="100000">
+                <small class="text-muted">Transaksi di atas nominal ini akan memicu peringatan di dashboard.</small>
+              </div>
+              <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" id="settingsDarkMode" style="width: 18px; height: 18px;">
+                <label for="settingsDarkMode" style="font-size: 0.88rem; cursor: pointer;">Aktifkan Mode Gelap secara default</label>
+              </div>
+
+              <div class="text-end" style="margin-top: 1.25rem;">
+                <button type="submit" class="btn btn-primary">
+                  💾 Simpan Perubahan Profil
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Data Management & Backup -->
+          <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <!-- Backup & Restore -->
+            <div class="card-panel">
+              <h3 class="card-panel-title mb-3">
+                <span>💾</span> Backup & Pemulihan Data
+              </h3>
+              <p class="text-muted small mb-3">
+                Semua data Anda tersimpan aman di peramban (localStorage). Unduh cadangan file JSON untuk mengamankan data atau memindahkan ke komputer lain.
+              </p>
+
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <button type="button" class="btn btn-outline-primary" id="btnExportBackup">
+                  📥 Unduh Cadangan Data (Export JSON)
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="btnImportBackup">
+                  📤 Pulihkan Data dari Cadangan (Import JSON)
+                </button>
+                <input type="file" id="inputImportFile" accept=".json" style="display: none;">
+              </div>
+            </div>
+
+            <!-- Danger Zone: Reset -->
+            <div class="card-panel danger-zone">
+              <h3 class="card-panel-title text-danger mb-3">
+                <span>⚠️</span> Zona Bahaya (Reset Data)
+              </h3>
+              <p class="text-muted small mb-3">
+                Gunakan fitur ini hanya jika Anda ingin mengembalikan data ke contoh awal bakery atau menghapus seluruh catatan.
+              </p>
+
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <button type="button" class="btn btn-secondary" id="btnResetSample">
+                  🔄 Reset ke Data Contoh Awal
+                </button>
+                <button type="button" class="btn btn-danger" id="btnClearAll">
+                  🗑️ Kosongkan Seluruh Data Transaksi
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==========================================
+       MODALS
+       ========================================== -->
+
+  <!-- 1. Modal Input / Edit Income -->
+  <div class="modal-backdrop" id="modalIncome">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="incomeModalTitle">Catat Pemasukan Baru</h3>
+        <button type="button" class="btn-close-modal" data-close-modal="modalIncome">&times;</button>
+      </div>
+      <form id="incomeForm">
+        <div class="modal-body">
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">Tanggal Transaksi</label>
+              <input type="date" id="incomeDate" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Metode Pembayaran</label>
+              <select id="incomePaymentMethod" class="form-select" required>
+                <option value="Tunai">Tunai / Kas</option>
+                <option value="Transfer">Transfer Bank</option>
+                <option value="QRIS">QRIS Toko</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Pilih Produk Bolu (Otomatis)</label>
+            <select id="incomeProductSelect" class="form-select"></select>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">Nama Produk / Penjualan</label>
+              <input type="text" id="incomeProductName" class="form-control" placeholder="Contoh: Bolu Gulung Keju" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kategori</label>
+              <select id="incomeCategory" class="form-select">
+                <option value="Bolu Original">Bolu Original</option>
+                <option value="Bolu Coklat">Bolu Coklat</option>
+                <option value="Bolu Keju">Bolu Keju</option>
+                <option value="Bolu Pandan">Bolu Pandan</option>
+                <option value="Bolu Marble">Bolu Marble</option>
+                <option value="Kue Kering">Kue Kering</option>
+                <option value="Roti">Roti</option>
+                <option value="Pesanan Khusus">Pesanan Khusus</option>
+                <option value="Lainnya">Lainnya</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">Jumlah (Qty / Box)</label>
+              <input type="number" id="incomeQuantity" class="form-control" min="1" value="1" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Harga Satuan (Rp)</label>
+              <input type="number" id="incomeUnitPrice" class="form-control" min="0" step="500" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Total Penjualan (Rp)</label>
+              <input type="number" id="incomeTotal" class="form-control font-monospace fw-bold text-success" min="0" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Catatan / Keterangan (Opsional)</label>
+            <input type="text" id="incomeNotes" class="form-control" placeholder="Contoh: Pesanan takeaway Ibu Rina">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="modalIncome">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan Transaksi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Modal Input / Edit Expense -->
+  <div class="modal-backdrop" id="modalExpense">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="expenseModalTitle">Catat Pengeluaran Baru</h3>
+        <button type="button" class="btn-close-modal" data-close-modal="modalExpense">&times;</button>
+      </div>
+      <form id="expenseForm">
+        <div class="modal-body">
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">Tanggal Transaksi</label>
+              <input type="date" id="expenseDate" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Kategori Pengeluaran</label>
+              <select id="expenseCategory" class="form-select" required>
+                <option value="Bahan Baku">Bahan Baku (Tepung, Telur, Gula, dll)</option>
+                <option value="Kemasan">Kemasan & Dus Bolu</option>
+                <option value="Gaji Karyawan">Gaji Karyawan</option>
+                <option value="Listrik & Air">Listrik & Air</option>
+                <option value="Gas">Gas Elpiji Oven</option>
+                <option value="Sewa Tempat">Sewa Tempat</option>
+                <option value="Perawatan Alat">Perawatan & Servis Alat</option>
+                <option value="Transportasi">Transportasi / Bensin</option>
+                <option value="Marketing">Marketing / Promosi</option>
+                <option value="Pajak">Pajak / Retribusi</option>
+                <option value="Lainnya">Lainnya</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Deskripsi Pengeluaran</label>
+            <input type="text" id="expenseDescription" class="form-control" placeholder="Contoh: Beli telur ayam 10kg & mentega" required>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">Nominal Pengeluaran (Rp)</label>
+              <input type="number" id="expenseAmount" class="form-control font-monospace fw-bold text-danger" min="0" step="1000" placeholder="0" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Metode Pembayaran</label>
+              <select id="expensePaymentMethod" class="form-select" required>
+                <option value="Tunai">Tunai / Kas</option>
+                <option value="Transfer">Transfer Bank</option>
+                <option value="QRIS">QRIS / e-Wallet</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Keterangan / Nama Suplier (Opsional)</label>
+            <input type="text" id="expenseNotes" class="form-control" placeholder="Contoh: Toko Bahan Roti Berkah">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="modalExpense">Batal</button>
+          <button type="submit" class="btn btn-danger">Simpan Pengeluaran</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Modal Input / Edit Product -->
+  <div class="modal-backdrop" id="modalProduct">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="productModalTitle">Tambah Produk Baru</h3>
+        <button type="button" class="btn-close-modal" data-close-modal="modalProduct">&times;</button>
+      </div>
+      <form id="productForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Nama Produk Bolu / Kue</label>
+            <input type="text" id="prodNameInput" class="form-control" placeholder="Contoh: Bolu Gulung Keju Spesial" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Kategori</label>
+            <select id="prodCategoryInput" class="form-select" required>
+              <option value="Bolu Original">Bolu Original</option>
+              <option value="Bolu Coklat">Bolu Coklat</option>
+              <option value="Bolu Keju">Bolu Keju</option>
+              <option value="Bolu Pandan">Bolu Pandan</option>
+              <option value="Bolu Marble">Bolu Marble</option>
+              <option value="Kue Kering">Kue Kering</option>
+              <option value="Roti">Roti</option>
+              <option value="Pesanan Khusus">Pesanan Khusus</option>
+              <option value="Lainnya">Lainnya</option>
+            </select>
+          </div>
+
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">Harga Jual Konsumen (Rp)</label>
+              <input type="number" id="prodPriceInput" class="form-control font-monospace" min="0" step="500" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">HPP / Biaya Pokok Produksi (Rp)</label>
+              <input type="number" id="prodCostInput" class="form-control font-monospace" min="0" step="500" required>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;">
+            <span class="small text-muted">Perkiraan Keuntungan:</span>
+            <span id="prodMarginPreview" class="badge badge-success">Margin: Rp 0 (0%)</span>
+          </div>
+
+          <div class="form-row-grid" style="grid-template-columns: 1fr 1fr; margin-top: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <input type="checkbox" id="prodActiveInput" style="width: 18px; height: 18px;" checked>
+              <label for="prodActiveInput" style="font-size: 0.88rem; cursor: pointer;">Status Aktif Dijual</label>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <input type="checkbox" id="prodFavInput" style="width: 18px; height: 18px;">
+              <label for="prodFavInput" style="font-size: 0.88rem; cursor: pointer;">Tandai Favorit (Quick Add)</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="modalProduct">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan Produk</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. Modal Recurring Expenses Manager -->
+  <div class="modal-backdrop" id="modalRecurring">
+    <div class="modal-dialog modal-dialog-lg">
+      <div class="modal-header">
+        <h3 class="modal-title">Kelola Pengeluaran Rutin Bulanan</h3>
+        <button type="button" class="btn-close-modal" data-close-modal="modalRecurring">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-3">
+          Daftar pengeluaran rutin memudahkan Anda mencatat biaya operasional bulanan seperti sewa toko, gaji, listrik, dan tagihan lainnya dengan satu kali klik.
+        </p>
+
+        <!-- Existing List Table -->
+        <div class="table-card mb-3">
+          <div class="table-responsive">
+            <table class="app-table">
+              <thead>
+                <tr>
+                  <th>Deskripsi Biaya</th>
+                  <th>Kategori</th>
+                  <th class="text-end">Nominal</th>
+                  <th class="text-center">Jatuh Tempo</th>
+                  <th class="text-center">Metode</th>
+                  <th class="text-center" style="width: 110px;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="recurringListTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Add New Recurring Form -->
+        <div class="card-panel" style="background-color: var(--color-bg);">
+          <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem;">+ Tambah Pengeluaran Rutin Baru</h4>
+          <form id="addRecurringForm">
+            <div class="form-row-grid">
+              <div class="form-group">
+                <label class="form-label">Deskripsi Pengeluaran</label>
+                <input type="text" id="recDescInput" class="form-control" placeholder="Contoh: Tagihan Internet Toko" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Kategori</label>
+                <select id="recCategoryInput" class="form-select" required>
+                  <option value="Sewa Tempat">Sewa Tempat</option>
+                  <option value="Gaji Karyawan">Gaji Karyawan</option>
+                  <option value="Listrik & Air">Listrik & Air</option>
+                  <option value="Gas">Gas Elpiji</option>
+                  <option value="Marketing">Marketing / Internet</option>
+                  <option value="Perawatan Alat">Perawatan Alat</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row-grid">
+              <div class="form-group">
+                <label class="form-label">Nominal Estimasi (Rp)</label>
+                <input type="number" id="recAmountInput" class="form-control font-monospace" min="0" step="10000" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tanggal Tiap Bulan (1-31)</label>
+                <input type="number" id="recDayInput" class="form-control" min="1" max="31" value="1" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Metode Pembayaran</label>
+                <select id="recMethodInput" class="form-select">
+                  <option value="Transfer">Transfer</option>
+                  <option value="Tunai">Tunai</option>
+                  <option value="QRIS">QRIS</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="text-end">
+              <button type="submit" class="btn btn-outline-primary btn-sm">Tambahkan ke Daftar Rutin</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal="modalRecurring">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Modal Confirmation (Generic) -->
+  <div class="modal-backdrop" id="modalConfirm">
+    <div class="modal-dialog" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="confirmModalTitle">Konfirmasi Tindakan</h3>
+        <button type="button" class="btn-close-modal" data-close-modal="modalConfirm">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmModalMessage" class="text-muted" style="font-size: 0.95rem; line-height: 1.5;"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal="modalConfirm">Batal</button>
+        <button type="button" class="btn btn-danger" id="btnConfirmAction">Ya, Lanjutkan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Application Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/reports.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    // Live Indonesian Header Date
+    const today = new Date();
+    const dateText = today.toLocaleDateString('id-ID', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const headerEl = document.getElementById('currentDateText');
+    if (headerEl) headerEl.textContent = dateText;
+  </script>
+</body>
+</html>
