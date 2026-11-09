@@ -282,6 +282,82 @@ body {
   gap: 0.4rem;
 }
 
+/* Database Status Badge */
+.db-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.38rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  transition: var(--transition);
+  user-select: none;
+}
+
+.db-status-badge:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-surface);
+  transform: translateY(-1px);
+}
+
+.db-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.db-dot.online {
+  background-color: var(--color-income);
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.25);
+  animation: pulse-online 2.5s infinite;
+}
+
+.db-dot.offline {
+  background-color: var(--color-warning);
+  box-shadow: 0 0 0 3px rgba(239, 108, 0, 0.25);
+}
+
+@keyframes pulse-online {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.75; }
+}
+
+.db-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.db-info-card {
+  padding: 0.75rem 0.9rem;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.db-info-num {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.db-info-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
+
 .header-action-btn {
   display: flex;
   align-items: center;
@@ -1169,6 +1245,344 @@ body.dark-theme .unusual-item {
 
 /* ===================================================================
    REPORTS TAB & PRINT STYLES
+   =================================================================== */
+
+/* ===================================================================
+   HPP CALCULATOR MODAL STYLES
+   =================================================================== */
+.hpp-product-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.4rem;
+  background-color: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.hpp-product-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.92rem;
+}
+
+.hpp-product-price {
+  font-size: 0.88rem;
+  color: var(--color-text-secondary);
+}
+
+.hpp-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 1.4rem;
+  border-bottom: 1px solid var(--color-border-light);
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.hpp-table-wrapper {
+  overflow-x: auto;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.hpp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.hpp-table th {
+  background-color: var(--color-bg);
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.55rem 0.7rem;
+  border-bottom: 2px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.hpp-table td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--color-border-light);
+  vertical-align: middle;
+}
+
+.hpp-table tr:hover {
+  background-color: var(--color-primary-soft);
+}
+
+.hpp-table .hpp-input {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.84rem;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  transition: border-color 0.2s;
+}
+
+.hpp-table .hpp-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(139, 69, 19, 0.12);
+}
+
+.hpp-table .hpp-input-number {
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.hpp-table .hpp-input-qty {
+  text-align: center;
+}
+
+.hpp-table .hpp-subtotal {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: right;
+  padding-right: 0.7rem;
+  white-space: nowrap;
+}
+
+.hpp-table .hpp-row-num {
+  font-weight: 600;
+  color: var(--color-text-light);
+  text-align: center;
+  font-size: 0.78rem;
+}
+
+.hpp-table .btn-remove-ingredient {
+  background: none;
+  border: none;
+  color: var(--color-expense);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 4px;
+  transition: var(--transition);
+  line-height: 1;
+}
+
+.hpp-table .btn-remove-ingredient:hover {
+  background-color: var(--color-expense-soft);
+}
+
+.hpp-table .hpp-select {
+  width: 100%;
+  padding: 0.35rem 0.3rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.hpp-table .hpp-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.hpp-summary-section {
+  padding: 1rem 1.4rem;
+  border-top: 2px solid var(--color-border);
+  background-color: var(--color-bg);
+}
+
+.hpp-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1fr;
+  gap: 1rem;
+}
+
+.hpp-summary-item {
+  text-align: center;
+  padding: 0.6rem;
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+}
+
+.hpp-summary-highlight {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  border-color: var(--color-primary-dark);
+}
+
+.hpp-summary-highlight .hpp-summary-label {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.hpp-summary-highlight .hpp-summary-value {
+  color: #FFFFFF !important;
+}
+
+.hpp-summary-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.3rem;
+}
+
+.hpp-summary-value {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+}
+
+.hpp-total-value {
+  font-size: 1.2rem;
+}
+
+.hpp-empty-state {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--color-text-light);
+}
+
+.hpp-empty-state .hpp-empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.hpp-empty-state p {
+  font-size: 0.88rem;
+  margin: 0.3rem 0;
+}
+
+@media (max-width: 640px) {
+  .hpp-summary-grid {
+    grid-template-columns: 1fr;
+  }
+  .hpp-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ===================================================================
+   MASTER BAHAN & STOCK STYLES
+   =================================================================== */
+.stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.stock-badge-ok {
+  background-color: var(--color-income-soft);
+  color: var(--color-income);
+}
+
+.stock-badge-low {
+  background-color: var(--color-warning-soft);
+  color: var(--color-warning);
+  animation: pulse-warning 2s ease-in-out infinite;
+}
+
+.stock-badge-empty {
+  background-color: var(--color-expense-soft);
+  color: var(--color-expense);
+}
+
+@keyframes pulse-warning {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.stock-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.stock-value-ok { color: var(--color-income); }
+.stock-value-low { color: var(--color-warning); }
+.stock-value-empty { color: var(--color-expense); }
+
+.low-stock-alert {
+  background: linear-gradient(135deg, var(--color-warning-soft), #FFF8E1);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1.2rem;
+  margin-bottom: 1.2rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.88rem;
+}
+
+body.dark-theme .low-stock-alert {
+  background: linear-gradient(135deg, rgba(239, 108, 0, 0.12), rgba(239, 108, 0, 0.06));
+}
+
+.low-stock-alert-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.low-stock-alert-content {
+  flex: 1;
+}
+
+.low-stock-alert-title {
+  font-weight: 700;
+  color: var(--color-warning);
+  margin-bottom: 0.3rem;
+}
+
+.low-stock-tag {
+  display: inline-block;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-warning);
+  border-radius: 4px;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-warning);
+  margin: 0.15rem 0.2rem 0.15rem 0;
+}
+
+.stock-log-type-in {
+  background-color: var(--color-income-soft);
+  color: var(--color-income);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.stock-log-type-out {
+  background-color: var(--color-expense-soft);
+  color: var(--color-expense);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* ===================================================================
+   REPORTS TAB & PRINT STYLES (continued)
    =================================================================== */
 .report-controls-bar {
   background-color: var(--color-surface);

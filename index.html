@@ -43,6 +43,11 @@
         <span>Produk & Harga</span>
       </a>
 
+      <a href="#ingredients" class="nav-item" data-view="ingredients">
+        <span class="nav-icon">📦</span>
+        <span>Master Bahan & Stok</span>
+      </a>
+
       <div class="nav-section-title">Laporan & Analisis</div>
 
       <a href="#reports" class="nav-item" data-view="reports">
@@ -86,6 +91,12 @@
       </div>
 
       <div class="header-right">
+        <!-- Database Connection Badge -->
+        <div class="db-status-badge" id="dbStatusBadge" title="Klik untuk rincian Database SQLite" onclick="app.showDbInfoModal()">
+          <span class="db-dot offline" id="dbStatusDot"></span>
+          <span id="dbStatusText">Cek DB...</span>
+        </div>
+
         <div class="header-date-badge" id="headerDateDisplay">
           <span>📅</span>
           <span id="currentDateText">Hari ini</span>
@@ -427,10 +438,129 @@
                   <th class="text-end" style="width: 130px;">HPP (Pokok)</th>
                   <th class="text-end" style="width: 160px;">Margin Keuntungan</th>
                   <th class="text-center" style="width: 100px;">Status</th>
-                  <th class="text-center" style="width: 90px;">Aksi</th>
+                  <th class="text-center" style="width: 120px;">Aksi</th>
                 </tr>
               </thead>
               <tbody id="productsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==========================================
+           4b. MASTER BAHAN & STOK VIEW
+           ========================================== -->
+      <section id="view-ingredients" class="view-panel">
+        <div class="page-header-block">
+          <div>
+            <h2 class="page-title">Master Bahan & Monitoring Stok</h2>
+            <p class="page-subtitle">Kelola daftar bahan baku, pantau stok, dan catat pembelian bahan</p>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary" onclick="app.openIngredientModal()">
+              <span>+</span> Tambah Bahan
+            </button>
+            <button type="button" class="btn btn-outline-primary" onclick="app.openStockInModal()">
+              📥 Stok Masuk
+            </button>
+          </div>
+        </div>
+
+        <!-- Low Stock Alert -->
+        <div id="lowStockAlertBox" style="display: none;"></div>
+
+        <!-- Inventory Summary Cards -->
+        <div class="summary-cards-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 1.2rem;">
+          <div class="stat-card" style="border-left: 4px solid var(--color-primary);">
+            <div class="stat-card-top">
+              <span class="stat-label">Total Jenis Bahan</span>
+              <div class="stat-icon" style="background: var(--color-primary-soft); color: var(--color-primary);">📦</div>
+            </div>
+            <div class="summary-value" style="color: var(--color-primary);" id="ingTotalCount">0</div>
+          </div>
+          <div class="stat-card" style="border-left: 4px solid var(--color-profit);">
+            <div class="stat-card-top">
+              <span class="stat-label">Nilai Inventaris</span>
+              <div class="stat-icon" style="background: var(--color-profit-soft); color: var(--color-profit);">💎</div>
+            </div>
+            <div class="summary-value" style="color: var(--color-profit);" id="ingTotalValue">Rp 0</div>
+          </div>
+          <div class="stat-card" style="border-left: 4px solid var(--color-warning);">
+            <div class="stat-card-top">
+              <span class="stat-label">Stok Menipis</span>
+              <div class="stat-icon" style="background: var(--color-warning-soft); color: var(--color-warning);">⚠️</div>
+            </div>
+            <div class="summary-value" style="color: var(--color-warning);" id="ingLowStockCount">0</div>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-card">
+          <div class="filter-left-group">
+            <div class="search-input-wrapper">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="ingredientSearchInput" class="form-control form-control-search" placeholder="Cari nama bahan...">
+            </div>
+            <select id="ingredientCategoryFilter" class="form-select" style="max-width: 200px;">
+              <option value="Semua">Semua Kategori</option>
+            </select>
+            <select id="ingredientStockFilter" class="form-select" style="max-width: 180px;">
+              <option value="Semua">Semua Status Stok</option>
+              <option value="low">⚠️ Stok Menipis</option>
+              <option value="empty">🔴 Stok Habis</option>
+              <option value="ok">✅ Stok Aman</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Ingredients Table -->
+        <div class="table-card">
+          <div class="table-responsive">
+            <table class="app-table">
+              <thead>
+                <tr>
+                  <th style="width: 40px;" class="text-center">No</th>
+                  <th>Nama Bahan</th>
+                  <th>Kategori</th>
+                  <th class="text-center">Satuan</th>
+                  <th class="text-end" style="width: 120px;">Harga Terakhir</th>
+                  <th class="text-center" style="width: 100px;">Stok</th>
+                  <th class="text-center" style="width: 90px;">Min. Stok</th>
+                  <th class="text-center" style="width: 110px;">Status Stok</th>
+                  <th class="text-center" style="width: 130px;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="ingredientsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Stock Movement Log -->
+        <div class="card-panel" style="margin-top: 1.5rem;">
+          <div class="card-panel-header">
+            <h3 class="card-panel-title">
+              <span>📋</span> Riwayat Pergerakan Stok
+            </h3>
+            <select id="stockLogFilter" class="form-select" style="max-width: 200px; font-size: 0.82rem;" onchange="app.renderStockLog()">
+              <option value="all">Semua Pergerakan</option>
+              <option value="in">📥 Stok Masuk</option>
+              <option value="out">📤 Stok Keluar</option>
+            </select>
+          </div>
+          <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+            <table class="app-table" style="font-size: 0.82rem;">
+              <thead>
+                <tr>
+                  <th>Tanggal</th>
+                  <th>Bahan</th>
+                  <th class="text-center">Tipe</th>
+                  <th class="text-end">Qty</th>
+                  <th class="text-end">Harga /Satuan</th>
+                  <th class="text-end">Total</th>
+                  <th>Keterangan</th>
+                </tr>
+              </thead>
+              <tbody id="stockLogTableBody"></tbody>
             </table>
           </div>
         </div>
@@ -742,8 +872,65 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Deskripsi Pengeluaran</label>
-            <input type="text" id="expenseDescription" class="form-control" placeholder="Contoh: Beli telur ayam 10kg & mentega" required>
+            <label class="form-label">Deskripsi / Keterangan Belanja</label>
+            <input type="text" id="expenseDescription" class="form-control" placeholder="Contoh: Beli tepung terigu 5kg" required>
+          </div>
+
+          <!-- Link to Master Bahan (shown only when category = Bahan Baku) -->
+          <div class="form-group" id="expenseIngredientLinkGroup" style="display: none;">
+            <label class="form-label">🔗 Tautkan ke Master Bahan (Belanja Bahan Baku)</label>
+            <select id="expenseIngredientLink" class="form-select">
+              <option value="">-- Tidak ditautkan --</option>
+              <option value="__NEW__">➕ Tambah Sebagai Bahan Baru di Master Bahan...</option>
+            </select>
+
+            <!-- Existing Ingredient Qty Group -->
+            <div class="form-row-grid" id="expenseIngredientQtyGroup" style="display: none; margin-top: 0.6rem;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label small">Qty Beli</label>
+                <input type="number" id="expenseIngredientQty" class="form-control font-monospace" min="0" step="0.01" placeholder="0">
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label small">Satuan</label>
+                <input type="text" id="expenseIngredientUnit" class="form-control" readonly>
+              </div>
+            </div>
+
+            <!-- New Ingredient Form Group (When creating new ingredient from expense) -->
+            <div id="expenseNewIngredientGroup" style="display: none; margin-top: 0.6rem; padding: 0.85rem; background: var(--color-bg); border: 1px dashed var(--color-primary); border-radius: var(--radius-md);">
+              <div class="form-group" style="margin-bottom: 0.5rem;">
+                <label class="form-label small" style="font-weight: 600;">Nama Bahan Baru di Master</label>
+                <input type="text" id="expenseNewIngName" class="form-control" placeholder="Contoh: Tepung Terigu Segitiga Biru">
+              </div>
+              <div class="form-row-grid" style="margin-bottom: 0.5rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label small">Kategori Bahan</label>
+                  <select id="expenseNewIngCategory" class="form-select">
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label small">Satuan Bahan</label>
+                  <select id="expenseNewIngUnit" class="form-select">
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
+              </div>
+              <div class="form-row-grid">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label small">Jumlah Beli (Qty)</label>
+                  <input type="number" id="expenseNewIngQty" class="form-control font-monospace" min="0.01" step="0.01" placeholder="Contoh: 10">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label small">Batas Min. Stok (Peringatan)</label>
+                  <input type="number" id="expenseNewIngMinStock" class="form-control font-monospace" min="0" step="0.1" placeholder="Contoh: 2">
+                </div>
+              </div>
+            </div>
+
+            <p class="small text-muted" style="margin-top: 0.4rem;">
+              📦 Pembelian bahan otomatis menambah stok di Master Bahan dan tercatat di mutasi stok
+            </p>
           </div>
 
           <div class="form-row-grid">
@@ -810,7 +997,12 @@
             </div>
             <div class="form-group">
               <label class="form-label">HPP / Biaya Pokok Produksi (Rp)</label>
-              <input type="number" id="prodCostInput" class="form-control font-monospace" min="0" step="500" required>
+              <div style="display: flex; gap: 0.5rem; align-items: stretch;">
+                <input type="number" id="prodCostInput" class="form-control font-monospace" min="0" step="500" required style="flex: 1;">
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="app.openHppCalculator()" title="Buka Kalkulator HPP" style="white-space: nowrap; padding: 0.4rem 0.7rem; font-size: 0.8rem;">
+                  🧮 Hitung HPP
+                </button>
+              </div>
             </div>
           </div>
 
@@ -833,6 +1025,284 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-close-modal="modalProduct">Batal</button>
           <button type="submit" class="btn btn-primary">Simpan Produk</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3b. Modal HPP Calculator -->
+  <div class="modal-backdrop" id="modalHppCalc">
+    <div class="modal-dialog modal-dialog-lg">
+      <div class="modal-header" style="background: linear-gradient(135deg, var(--color-primary-soft), var(--color-warning-soft)); border-bottom-color: var(--color-border);">
+        <div>
+          <h3 class="modal-title" style="display: flex; align-items: center; gap: 0.5rem;">
+            🧮 Kalkulator HPP (Harga Pokok Produksi)
+          </h3>
+          <p class="small text-muted" style="margin: 0.25rem 0 0; font-weight: normal;">
+            Rincikan bahan-bahan untuk menghitung biaya produksi per item
+          </p>
+        </div>
+        <button type="button" class="btn-close-modal" data-close-modal="modalHppCalc">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 0;">
+        <!-- Product Info Banner -->
+        <div class="hpp-product-banner">
+          <div class="hpp-product-info">
+            <span class="badge badge-category" id="hppCalcCategory">-</span>
+            <strong id="hppCalcProductName">Produk Baru</strong>
+          </div>
+          <div class="hpp-product-price">
+            Harga Jual: <strong id="hppCalcSellingPrice" class="text-success">Rp 0</strong>
+          </div>
+        </div>
+
+        <!-- Template Loader & Master Bahan Actions -->
+        <div class="hpp-toolbar">
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <label class="small text-muted" style="font-weight: 600;">Template Resep:</label>
+            <select id="hppTemplateSelect" class="form-select" style="max-width: 200px; font-size: 0.82rem; padding: 0.35rem 0.5rem;" onchange="app.loadHppTemplate(this.value)">
+              <option value="">-- Pilih Template --</option>
+            </select>
+            <button type="button" class="btn btn-xs btn-outline-primary" onclick="app.loadHppTemplate(document.getElementById('hppTemplateSelect').value)" title="Muat template bahan">📋 Muat</button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-xs btn-primary" onclick="app.addHppIngredientRow()">
+              ➕ Tambah Bahan
+            </button>
+            <button type="button" class="btn btn-xs btn-outline-primary" onclick="app.openIngredientModal()" title="Tambah bahan baru ke Master Bahan">
+              📦 + Master Bahan
+            </button>
+            <button type="button" class="btn btn-xs btn-outline-primary" onclick="app.saveAllHppIngredientsToMaster()" title="Daftarkan semua bahan dalam resep ini ke Master Bahan">
+              💾 Simpan Semua ke Master
+            </button>
+          </div>
+        </div>
+
+        <!-- Ingredients Table -->
+        <div class="hpp-table-wrapper">
+          <table class="hpp-table">
+            <thead>
+              <tr>
+                <th style="width: 30px;" class="text-center">No</th>
+                <th style="min-width: 160px;">Nama Bahan</th>
+                <th style="width: 75px;" class="text-center">Qty</th>
+                <th style="width: 90px;">Satuan</th>
+                <th style="width: 120px;" class="text-end">Harga /Satuan</th>
+                <th style="width: 120px;" class="text-end">Subtotal</th>
+                <th style="width: 40px;" class="text-center"></th>
+              </tr>
+            </thead>
+            <tbody id="hppIngredientsBody">
+              <!-- Rows rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- HPP Summary -->
+        <div class="hpp-summary-section">
+          <div class="hpp-summary-grid">
+            <div class="hpp-summary-item">
+              <span class="hpp-summary-label">Jumlah Bahan</span>
+              <span class="hpp-summary-value" id="hppTotalItems">0 item</span>
+            </div>
+            <div class="hpp-summary-item hpp-summary-highlight">
+              <span class="hpp-summary-label">Total HPP</span>
+              <span class="hpp-summary-value hpp-total-value" id="hppTotalCost">Rp 0</span>
+            </div>
+            <div class="hpp-summary-item">
+              <span class="hpp-summary-label">Margin Estimasi</span>
+              <span class="hpp-summary-value" id="hppMarginEstimate">Rp 0 (0%)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="app.clearAllHppIngredients()">🗑️ Bersihkan Semua</button>
+        <div style="display: flex; gap: 0.5rem;">
+          <button type="button" class="btn btn-secondary" data-close-modal="modalHppCalc">Batal</button>
+          <button type="button" class="btn btn-primary" onclick="app.applyHppResult()">
+            ✅ Terapkan HPP
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Tambah/Edit Bahan -->
+  <div class="modal-backdrop" id="modalIngredient">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title" id="ingredientModalTitle">Tambah Bahan Baru</h3>
+        <button type="button" class="btn-close-modal" data-close-modal="modalIngredient">&times;</button>
+      </div>
+      <form id="ingredientForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Nama Bahan</label>
+            <input type="text" id="ingNameInput" class="form-control" placeholder="Contoh: Tepung Terigu Segitiga Biru" required>
+          </div>
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">Kategori Bahan</label>
+              <select id="ingCategoryInput" class="form-select" required>
+                <option value="Tepung & Pati">Tepung & Pati</option>
+                <option value="Telur & Susu">Telur & Susu</option>
+                <option value="Gula & Pemanis">Gula & Pemanis</option>
+                <option value="Lemak & Minyak">Lemak & Minyak</option>
+                <option value="Coklat & Kakao">Coklat & Kakao</option>
+                <option value="Keju & Dairy">Keju & Dairy</option>
+                <option value="Buah & Kacang">Buah & Kacang</option>
+                <option value="Perisa & Pewarna">Perisa & Pewarna</option>
+                <option value="Pengembang & Pengemulsi">Pengembang & Pengemulsi</option>
+                <option value="Kemasan">Kemasan</option>
+                <option value="Bahan Bakar">Bahan Bakar</option>
+                <option value="Lainnya">Lainnya</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Satuan</label>
+              <select id="ingUnitInput" class="form-select" required>
+                <option value="kg">kg</option>
+                <option value="gram">gram</option>
+                <option value="liter">liter</option>
+                <option value="ml">ml</option>
+                <option value="butir">butir</option>
+                <option value="buah">buah</option>
+                <option value="pcs">pcs</option>
+                <option value="lembar">lembar</option>
+                <option value="tabung">tabung</option>
+                <option value="bungkus">bungkus</option>
+                <option value="sachet">sachet</option>
+                <option value="kaleng">kaleng</option>
+                <option value="botol">botol</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">Harga per Satuan (Rp)</label>
+              <input type="number" id="ingPriceInput" class="form-control font-monospace" min="0" step="100" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Stok Saat Ini</label>
+              <input type="number" id="ingStockInput" class="form-control font-monospace" min="0" step="0.1">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Stok Minimum (Peringatan)</label>
+            <input type="number" id="ingMinStockInput" class="form-control font-monospace" min="0" step="0.1" placeholder="Batas bawah stok untuk peringatan">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="modalIngredient">Batal</button>
+          <button type="submit" class="btn btn-primary">Simpan Bahan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Stok Masuk (Purchase / Restock) -->
+  <div class="modal-backdrop" id="modalStockIn">
+    <div class="modal-dialog">
+      <div class="modal-header" style="background: linear-gradient(135deg, var(--color-income-soft), var(--color-profit-soft));">
+        <h3 class="modal-title">📥 Catat Stok Masuk (Pembelian)</h3>
+        <button type="button" class="btn-close-modal" data-close-modal="modalStockIn">&times;</button>
+      </div>
+      <form id="stockInForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Tanggal Pembelian</label>
+            <input type="date" id="stockInDate" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pilih Bahan</label>
+            <select id="stockInIngredient" class="form-select" required onchange="app.onStockInIngredientChanged()">
+              <option value="">-- Pilih Bahan --</option>
+            </select>
+          </div>
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">Jumlah Beli</label>
+              <input type="number" id="stockInQty" class="form-control font-monospace" min="0.01" step="0.01" required oninput="app.calcStockInTotal()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Satuan</label>
+              <input type="text" id="stockInUnit" class="form-control" readonly>
+            </div>
+          </div>
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">Harga per Satuan (Rp)</label>
+              <input type="number" id="stockInUnitPrice" class="form-control font-monospace" min="0" step="100" required oninput="app.calcStockInTotal()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Total Harga (Rp)</label>
+              <input type="number" id="stockInTotal" class="form-control font-monospace" readonly>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Metode Pembayaran</label>
+            <select id="stockInPayment" class="form-select">
+              <option value="Tunai">Tunai</option>
+              <option value="Transfer">Transfer</option>
+              <option value="QRIS">QRIS</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Keterangan</label>
+            <input type="text" id="stockInNotes" class="form-control" placeholder="Contoh: Beli dari supplier X">
+          </div>
+          <div style="padding: 0.7rem; background: var(--color-income-soft); border-radius: var(--radius-md); margin-top: 0.5rem;">
+            <span class="small" style="color: var(--color-income);">
+              ✅ Stok bahan akan bertambah dan otomatis tercatat sebagai pengeluaran "Bahan Baku"
+            </span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="modalStockIn">Batal</button>
+          <button type="submit" class="btn btn-primary">💾 Simpan & Tambah Stok</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Stok Keluar (Production Usage) -->
+  <div class="modal-backdrop" id="modalStockOut">
+    <div class="modal-dialog">
+      <div class="modal-header" style="background: linear-gradient(135deg, var(--color-expense-soft), var(--color-warning-soft));">
+        <h3 class="modal-title">📤 Catat Stok Keluar (Produksi)</h3>
+        <button type="button" class="btn-close-modal" data-close-modal="modalStockOut">&times;</button>
+      </div>
+      <form id="stockOutForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Tanggal Pemakaian</label>
+            <input type="date" id="stockOutDate" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Pilih Bahan</label>
+            <select id="stockOutIngredient" class="form-select" required onchange="app.onStockOutIngredientChanged()">
+              <option value="">-- Pilih Bahan --</option>
+            </select>
+          </div>
+          <div class="form-row-grid">
+            <div class="form-group">
+              <label class="form-label">Jumlah Pakai</label>
+              <input type="number" id="stockOutQty" class="form-control font-monospace" min="0.01" step="0.01" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Stok Tersisa</label>
+              <input type="text" id="stockOutRemaining" class="form-control font-monospace" readonly style="color: var(--color-text-secondary);">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Keterangan / Untuk Produk</label>
+            <input type="text" id="stockOutNotes" class="form-control" placeholder="Contoh: Produksi 10 Bolu Pandan">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="modalStockOut">Batal</button>
+          <button type="submit" class="btn btn-danger">📤 Kurangi Stok</button>
         </div>
       </form>
     </div>
@@ -919,6 +1389,29 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-close-modal="modalRecurring">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Status Database SQLite -->
+  <div class="modal-backdrop" id="modalDbInfo">
+    <div class="modal-dialog">
+      <div class="modal-header" style="background: linear-gradient(135deg, var(--color-primary-soft), var(--color-profit-soft));">
+        <h3 class="modal-title" style="display: flex; align-items: center; gap: 0.5rem;">
+          🗄️ Status Database SQLite
+        </h3>
+        <button type="button" class="btn-close-modal" data-close-modal="modalDbInfo">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="dbModalContent">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn btn-outline-primary btn-sm" onclick="app.refreshDbStatus()">
+          🔄 Cek Ulang Koneksi
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm" data-close-modal="modalDbInfo">Tutup</button>
       </div>
     </div>
   </div>

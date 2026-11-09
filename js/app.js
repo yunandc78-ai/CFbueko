@@ -26,12 +26,19 @@ class CashflowApp {
     this.incomeFilter = { search: '', category: 'Semua', paymentMethod: 'Semua', period: 'all' };
     this.expenseFilter = { search: '', category: 'Semua', paymentMethod: 'Semua', period: 'all' };
     this.productFilter = { search: '', category: 'Semua' };
+    this.ingredientFilter = { search: '', category: 'Semua', stockStatus: 'Semua' };
 
     // Modals & confirmation tracking
     this.editingTrxId = null;
     this.editingProdId = null;
     this.editingRecId = null;
+    this._editingIngId = null;
     this.pendingConfirmCallback = null;
+
+    // HPP Calculator state
+    this._hppIngredients = [];
+    this._currentHppIngredients = [];
+    this._hppSellingPrice = 0;
 
     this.init();
   }
@@ -46,6 +53,16 @@ class CashflowApp {
     // Render current route or default dashboard
     const hash = window.location.hash.replace('#', '') || 'dashboard';
     this.navigate(hash);
+
+    // Database connection status listener
+    window.addEventListener('db-status-changed', (e) => {
+      this.updateDbStatusBadge(e.detail);
+    });
+
+    // Check database connection on start
+    setTimeout(() => {
+      this.updateDbStatusBadge({ connected: this.dm.isUsingDb, info: this.dm.dbInfo });
+    }, 200);
 
     // Refresh charts on window resize
     window.addEventListener('resize', () => {
@@ -127,7 +144,7 @@ class CashflowApp {
   }
 
   navigate(viewName) {
-    const views = ['dashboard', 'income', 'expense', 'products', 'reports', 'settings'];
+    const views = ['dashboard', 'income', 'expense', 'products', 'ingredients', 'reports', 'settings'];
     if (!views.includes(viewName)) viewName = 'dashboard';
 
     this.currentView = viewName;
@@ -169,6 +186,9 @@ class CashflowApp {
         break;
       case 'products':
         this.renderProductsView();
+        break;
+      case 'ingredients':
+        this.renderIngredientsView();
         break;
       case 'reports':
         this.renderReportsView();
@@ -689,7 +709,11 @@ class CashflowApp {
           </td>
           <td><span class="badge badge-category">${p.category}</span></td>
           <td class="text-end font-monospace fw-semibold">${Utils.formatRupiah(p.price)}</td>
-          <td class="text-end font-monospace text-muted">${Utils.formatRupiah(cost)}</td>
+          <td class="text-end font-monospace text-muted">
+            <span>${Utils.formatRupiah(cost)}</span>
+            ${p.hppIngredients && p.hppIngredients.length > 0 ?
+              `<br><span class="badge badge-light" style="font-size:0.65rem; margin-top:2px; cursor:default;" title="${p.hppIngredients.length} bahan">📦 ${p.hppIngredients.length} bahan</span>` : ''}
+          </td>
           <td class="text-end font-monospace">
             <span class="text-success fw-bold">${Utils.formatRupiah(marginRp)}</span>
             <span class="badge badge-light ms-1">${marginPct}%</span>
@@ -701,6 +725,7 @@ class CashflowApp {
           </td>
           <td class="text-center">
             <div class="table-actions">
+              <button class="btn-icon" title="Kalkulator HPP" onclick="app.openHppCalcForProduct('${p.id}')" style="color: var(--color-warning);">🧮</button>
               <button class="btn-icon text-primary" title="Edit" onclick="app.editProduct('${p.id}')">✏️</button>
               <button class="btn-icon text-danger" title="Hapus" onclick="app.confirmDeleteProduct('${p.id}')">🗑️</button>
             </div>
@@ -1128,7 +1153,48 @@ class CashflowApp {
       this.showToast('Transaksi pengeluaran berhasil diperbarui!', 'success');
     } else {
       this.dm.addTransaction(payload);
-      this.showToast('Transaksi pengeluaran berhasil ditambahkan!', 'success');
+
+      // If linked to master bahan, auto-adjust stock
+      const linkedIngId = document.getElementById('expenseIngredientLink') ? document.getElementById('expenseIngredientLink').value : '';
+
+      if (payload.category === 'Bahan Baku') {
+        if (linkedIngId === '__NEW__') {
+          // Create as new ingredient in Master Bahan
+          const newName = (document.getElementById('expenseNewIngName') ? document.getElementById('expenseNewIngName').value.trim() : '') || payload.description;
+          const newCat = (document.getElementById('expenseNewIngCategory') ? document.getElementById('expenseNewIngCategory').value : '') || 'Tepung & Pati';
+          const newUnit = (document.getElementById('expenseNewIngUnit') ? document.getElementById('expenseNewIngUnit').value : '') || 'kg';
+          const newQty = Number(document.getElementById('expenseNewIngQty') ? document.getElementById('expenseNewIngQty').value : 0) || 1;
+          const newMinStock = Number(document.getElementById('expenseNewIngMinStock') ? document.getElementById('expenseNewIngMinStock').value : 0) || 0;
+          const unitPrice = newQty > 0 ? Math.round(payload.amount / newQty) : payload.amount;
+
+          const newIng = this.dm.addIngredient({
+            name: newName,
+            category: newCat,
+            unit: newUnit,
+            lastPrice: unitPrice,
+            stock: 0,
+            minStock: newMinStock,
+            active: true
+          });
+
+          this.dm.adjustStock(newIng.id, 'in', newQty, unitPrice, payload.date, '', `Pembelian baru: ${payload.description}`);
+          this.showToast(`Bahan "${newName}" ditambahkan ke Master Bahan & stok +${newQty} ${newUnit}!`, 'success');
+        } else if (linkedIngId) {
+          const linkedQty = Number(document.getElementById('expenseIngredientQty') ? document.getElementById('expenseIngredientQty').value : 0);
+          if (linkedQty > 0) {
+            const ing = this.dm.getIngredientById(linkedIngId);
+            if (ing) {
+              const unitPrice = linkedQty > 0 ? Math.round(payload.amount / linkedQty) : 0;
+              this.dm.adjustStock(linkedIngId, 'in', linkedQty, unitPrice, payload.date, '', `Dari pengeluaran: ${payload.description}`);
+              this.showToast(`Stok ${ing.name} bertambah +${linkedQty} ${ing.unit}`, 'success');
+            }
+          }
+        } else {
+          this.showToast('Transaksi pengeluaran berhasil ditambahkan!', 'success');
+        }
+      } else {
+        this.showToast('Transaksi pengeluaran berhasil ditambahkan!', 'success');
+      }
     }
 
     this.hideModal('modalExpense');
@@ -1138,6 +1204,8 @@ class CashflowApp {
   // --- Product Modal Operations ---
   openProductModal() {
     this.editingProdId = null;
+    this._currentHppIngredients = [];
+    this._hppIngredients = [];
 
     document.getElementById('productModalTitle').textContent = 'Tambah Produk Baru';
     document.getElementById('productForm').reset();
@@ -1153,6 +1221,7 @@ class CashflowApp {
     if (!prod) return;
 
     this.editingProdId = id;
+    this._currentHppIngredients = prod.hppIngredients ? JSON.parse(JSON.stringify(prod.hppIngredients)) : [];
 
     document.getElementById('productModalTitle').textContent = 'Edit Produk';
     document.getElementById('prodNameInput').value = prod.name;
@@ -1194,6 +1263,7 @@ class CashflowApp {
       category,
       price,
       costPrice,
+      hppIngredients: this._currentHppIngredients || [],
       active,
       isFavorite
     };
@@ -1206,9 +1276,953 @@ class CashflowApp {
       this.showToast('Produk baru berhasil ditambahkan!', 'success');
     }
 
+    this._currentHppIngredients = [];
     this.populateIncomeProductOptions();
     this.hideModal('modalProduct');
     this.renderCurrentView();
+  }
+
+  // ==========================================
+  // MASTER BAHAN & STOCK MANAGEMENT
+  // ==========================================
+
+  renderIngredientsView() {
+    this.renderIngredientsCategoryFilter();
+    this.renderIngredientsTable();
+    this.renderLowStockAlert();
+    this.renderStockLog();
+    this.renderIngredientStats();
+  }
+
+  renderIngredientStats() {
+    const ingredients = this.dm.getIngredients(true);
+    const totalValue = this.dm.getInventoryValue();
+    const lowStock = this.dm.getLowStockIngredients();
+
+    this.updateElementText('ingTotalCount', ingredients.length.toString());
+    this.updateElementText('ingTotalValue', Utils.formatRupiah(totalValue));
+    this.updateElementText('ingLowStockCount', lowStock.length.toString());
+  }
+
+  renderIngredientsCategoryFilter() {
+    const select = document.getElementById('ingredientCategoryFilter');
+    if (!select || select.options.length > 1) return;
+
+    INGREDIENT_CATEGORIES.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      select.appendChild(opt);
+    });
+  }
+
+  renderLowStockAlert() {
+    const alertBox = document.getElementById('lowStockAlertBox');
+    if (!alertBox) return;
+
+    const lowStock = this.dm.getLowStockIngredients();
+    if (lowStock.length === 0) {
+      alertBox.style.display = 'none';
+      return;
+    }
+
+    const tags = lowStock.map(i => {
+      const statusIcon = i.stock <= 0 ? '🔴' : '⚠️';
+      return `<span class="low-stock-tag">${statusIcon} ${i.name} (${i.stock} ${i.unit})</span>`;
+    }).join(' ');
+
+    alertBox.innerHTML = `
+      <div class="low-stock-alert">
+        <span class="low-stock-alert-icon">⚠️</span>
+        <div class="low-stock-alert-content">
+          <div class="low-stock-alert-title">${lowStock.length} Bahan dengan Stok Menipis / Habis</div>
+          <div>${tags}</div>
+        </div>
+      </div>
+    `;
+    alertBox.style.display = 'block';
+  }
+
+  renderIngredientsTable() {
+    const container = document.getElementById('ingredientsTableBody');
+    if (!container) return;
+
+    let ingredients = this.dm.getIngredients();
+
+    // Apply filters
+    if (this.ingredientFilter.category && this.ingredientFilter.category !== 'Semua') {
+      ingredients = ingredients.filter(i => i.category === this.ingredientFilter.category);
+    }
+    if (this.ingredientFilter.search) {
+      const q = this.ingredientFilter.search.toLowerCase().trim();
+      ingredients = ingredients.filter(i => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q));
+    }
+    if (this.ingredientFilter.stockStatus && this.ingredientFilter.stockStatus !== 'Semua') {
+      if (this.ingredientFilter.stockStatus === 'low') {
+        ingredients = ingredients.filter(i => i.stock > 0 && i.stock <= i.minStock);
+      } else if (this.ingredientFilter.stockStatus === 'empty') {
+        ingredients = ingredients.filter(i => i.stock <= 0);
+      } else if (this.ingredientFilter.stockStatus === 'ok') {
+        ingredients = ingredients.filter(i => i.stock > i.minStock);
+      }
+    }
+
+    if (ingredients.length === 0) {
+      container.innerHTML = `
+        <tr>
+          <td colspan="9" class="text-center py-5 text-muted">
+            <div style="font-size: 2.2rem; margin-bottom: 8px;">📦</div>
+            <div>Belum ada bahan yang cocok dengan pencarian.</div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    let rowsHtml = '';
+    ingredients.forEach((ing, idx) => {
+      const stock = ing.stock || 0;
+      const minStock = ing.minStock || 0;
+      let stockClass, stockBadgeClass, stockLabel;
+
+      if (stock <= 0) {
+        stockClass = 'stock-value-empty';
+        stockBadgeClass = 'stock-badge-empty';
+        stockLabel = '🔴 Habis';
+      } else if (stock <= minStock) {
+        stockClass = 'stock-value-low';
+        stockBadgeClass = 'stock-badge-low';
+        stockLabel = '⚠️ Menipis';
+      } else {
+        stockClass = 'stock-value-ok';
+        stockBadgeClass = 'stock-badge-ok';
+        stockLabel = '✅ Aman';
+      }
+
+      rowsHtml += `
+        <tr>
+          <td class="text-center text-muted" style="font-size: 0.8rem;">${idx + 1}</td>
+          <td>
+            <div class="fw-bold">${ing.name}</div>
+          </td>
+          <td><span class="badge badge-category">${ing.category}</span></td>
+          <td class="text-center"><span class="badge badge-light">${ing.unit}</span></td>
+          <td class="text-end font-monospace">${Utils.formatRupiah(ing.lastPrice || 0)}<span class="small text-muted">/${ing.unit}</span></td>
+          <td class="text-center"><span class="stock-value ${stockClass}">${stock}</span> <span class="small text-muted">${ing.unit}</span></td>
+          <td class="text-center font-monospace text-muted">${minStock}</td>
+          <td class="text-center"><span class="stock-badge ${stockBadgeClass}">${stockLabel}</span></td>
+          <td class="text-center">
+            <div class="table-actions">
+              <button class="btn-icon" title="Stok Masuk" onclick="app.openStockInForIngredient('${ing.id}')" style="color: var(--color-income);">📥</button>
+              <button class="btn-icon" title="Stok Keluar" onclick="app.openStockOutForIngredient('${ing.id}')" style="color: var(--color-expense);">📤</button>
+              <button class="btn-icon text-primary" title="Edit" onclick="app.editIngredient('${ing.id}')">✏️</button>
+              <button class="btn-icon text-danger" title="Hapus" onclick="app.confirmDeleteIngredient('${ing.id}')">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+    container.innerHTML = rowsHtml;
+  }
+
+  renderStockLog() {
+    const container = document.getElementById('stockLogTableBody');
+    if (!container) return;
+
+    const filterEl = document.getElementById('stockLogFilter');
+    const typeFilter = filterEl ? filterEl.value : 'all';
+
+    let log = this.dm.getStockLog();
+    if (typeFilter === 'in') log = log.filter(l => l.type === 'in');
+    if (typeFilter === 'out') log = log.filter(l => l.type === 'out');
+
+    // Show latest 50 entries
+    log = log.slice(0, 50);
+
+    if (log.length === 0) {
+      container.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-center py-3 text-muted">
+            Belum ada riwayat pergerakan stok.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    let html = '';
+    log.forEach(entry => {
+      const typeClass = entry.type === 'in' ? 'stock-log-type-in' : 'stock-log-type-out';
+      const typeLabel = entry.type === 'in' ? '📥 Masuk' : '📤 Keluar';
+      const qtyDisplay = entry.type === 'in' ? `+${entry.qty}` : `-${entry.qty}`;
+
+      html += `
+        <tr>
+          <td>${Utils.formatDateIndo(entry.date)}</td>
+          <td class="fw-bold">${entry.ingredientName}</td>
+          <td class="text-center"><span class="${typeClass}">${typeLabel}</span></td>
+          <td class="text-end font-monospace fw-bold">${qtyDisplay} ${entry.unit}</td>
+          <td class="text-end font-monospace">${Utils.formatRupiah(entry.unitPrice || 0)}</td>
+          <td class="text-end font-monospace fw-semibold">${Utils.formatRupiah(entry.totalPrice || 0)}</td>
+          <td class="text-muted small">${entry.notes || '-'}</td>
+        </tr>
+      `;
+    });
+    container.innerHTML = html;
+  }
+
+  // --- Ingredient CRUD Modal Operations ---
+
+  openIngredientModal() {
+    this._editingIngId = null;
+    document.getElementById('ingredientModalTitle').textContent = 'Tambah Bahan Baru';
+    document.getElementById('ingredientForm').reset();
+    this.showModal('modalIngredient');
+  }
+
+  editIngredient(id) {
+    const ing = this.dm.getIngredientById(id);
+    if (!ing) return;
+
+    this._editingIngId = id;
+    document.getElementById('ingredientModalTitle').textContent = 'Edit Bahan';
+    document.getElementById('ingNameInput').value = ing.name;
+    document.getElementById('ingCategoryInput').value = ing.category;
+    document.getElementById('ingUnitInput').value = ing.unit;
+    document.getElementById('ingPriceInput').value = ing.lastPrice || 0;
+    document.getElementById('ingStockInput').value = ing.stock || 0;
+    document.getElementById('ingMinStockInput').value = ing.minStock || 0;
+
+    this.showModal('modalIngredient');
+  }
+
+  saveIngredientForm(e) {
+    e.preventDefault();
+
+    const name = document.getElementById('ingNameInput').value.trim();
+    const category = document.getElementById('ingCategoryInput').value;
+    const unit = document.getElementById('ingUnitInput').value;
+    const lastPrice = Number(document.getElementById('ingPriceInput').value) || 0;
+    const stock = Number(document.getElementById('ingStockInput').value) || 0;
+    const minStock = Number(document.getElementById('ingMinStockInput').value) || 0;
+
+    if (!name) {
+      this.showToast('Harap masukkan nama bahan', 'warning');
+      return;
+    }
+
+    const payload = { name, category, unit, lastPrice, stock, minStock, active: true };
+
+    if (this._editingIngId) {
+      this.dm.updateIngredient(this._editingIngId, payload);
+      this.showToast('Data bahan berhasil diperbarui!', 'success');
+    } else {
+      this.dm.addIngredient(payload);
+      this.showToast('Bahan baru berhasil ditambahkan!', 'success');
+    }
+
+    this.hideModal('modalIngredient');
+    this.renderCurrentView();
+  }
+
+  confirmDeleteIngredient(id) {
+    const ing = this.dm.getIngredientById(id);
+    if (!ing) return;
+
+    this.showConfirmDialog(
+      'Hapus Bahan?',
+      `Apakah Anda yakin ingin menghapus bahan "${ing.name}" dari master bahan?`,
+      () => {
+        this.dm.deleteIngredient(id);
+        this.showToast('Bahan berhasil dihapus', 'success');
+        this.renderCurrentView();
+      }
+    );
+  }
+
+  // --- Stock In Modal (Purchase) ---
+
+  openStockInModal() {
+    document.getElementById('stockInForm').reset();
+    document.getElementById('stockInDate').value = new Date().toISOString().split('T')[0];
+    this._populateStockIngredientSelect('stockInIngredient');
+    document.getElementById('stockInUnit').value = '';
+    document.getElementById('stockInTotal').value = '';
+    this.showModal('modalStockIn');
+  }
+
+  openStockInForIngredient(ingId) {
+    this.openStockInModal();
+    document.getElementById('stockInIngredient').value = ingId;
+    this.onStockInIngredientChanged();
+  }
+
+  onStockInIngredientChanged() {
+    const ingId = document.getElementById('stockInIngredient').value;
+    const ing = this.dm.getIngredientById(ingId);
+    if (ing) {
+      document.getElementById('stockInUnit').value = ing.unit;
+      document.getElementById('stockInUnitPrice').value = ing.lastPrice || 0;
+      this.calcStockInTotal();
+    } else {
+      document.getElementById('stockInUnit').value = '';
+      document.getElementById('stockInUnitPrice').value = '';
+      document.getElementById('stockInTotal').value = '';
+    }
+  }
+
+  calcStockInTotal() {
+    const qty = Number(document.getElementById('stockInQty').value) || 0;
+    const price = Number(document.getElementById('stockInUnitPrice').value) || 0;
+    document.getElementById('stockInTotal').value = qty * price;
+  }
+
+  saveStockInForm(e) {
+    e.preventDefault();
+
+    const date = document.getElementById('stockInDate').value;
+    const ingId = document.getElementById('stockInIngredient').value;
+    const qty = Number(document.getElementById('stockInQty').value) || 0;
+    const unitPrice = Number(document.getElementById('stockInUnitPrice').value) || 0;
+    const paymentMethod = document.getElementById('stockInPayment').value;
+    const notes = document.getElementById('stockInNotes').value.trim();
+
+    if (!ingId || qty <= 0) {
+      this.showToast('Pilih bahan dan masukkan jumlah yang valid', 'warning');
+      return;
+    }
+
+    const ing = this.dm.getIngredientById(ingId);
+    if (!ing) return;
+
+    // 1. Adjust stock (adds stock + logs)
+    this.dm.adjustStock(ingId, 'in', qty, unitPrice, date, '', notes || `Pembelian ${ing.name}`);
+
+    // 2. Auto-create expense transaction for "Bahan Baku"
+    const totalPrice = qty * unitPrice;
+    this.dm.addTransaction({
+      type: 'expense',
+      date: date,
+      category: 'Bahan Baku',
+      description: `Beli ${ing.name} (${qty} ${ing.unit})`,
+      amount: totalPrice,
+      paymentMethod: paymentMethod,
+      notes: notes || `Stok masuk via Master Bahan`,
+      linkedIngredientId: ingId
+    });
+
+    this.hideModal('modalStockIn');
+    this.showToast(`Stok ${ing.name} bertambah +${qty} ${ing.unit} & tercatat sebagai pengeluaran Rp ${Utils.formatRupiah(totalPrice)}`, 'success');
+    this.renderCurrentView();
+  }
+
+  // --- Stock Out Modal (Production Usage) ---
+
+  openStockOutModal() {
+    document.getElementById('stockOutForm').reset();
+    document.getElementById('stockOutDate').value = new Date().toISOString().split('T')[0];
+    this._populateStockIngredientSelect('stockOutIngredient');
+    document.getElementById('stockOutRemaining').value = '';
+    this.showModal('modalStockOut');
+  }
+
+  openStockOutForIngredient(ingId) {
+    this.openStockOutModal();
+    document.getElementById('stockOutIngredient').value = ingId;
+    this.onStockOutIngredientChanged();
+  }
+
+  onStockOutIngredientChanged() {
+    const ingId = document.getElementById('stockOutIngredient').value;
+    const ing = this.dm.getIngredientById(ingId);
+    if (ing) {
+      document.getElementById('stockOutRemaining').value = `${ing.stock || 0} ${ing.unit} tersisa`;
+    } else {
+      document.getElementById('stockOutRemaining').value = '';
+    }
+  }
+
+  saveStockOutForm(e) {
+    e.preventDefault();
+
+    const date = document.getElementById('stockOutDate').value;
+    const ingId = document.getElementById('stockOutIngredient').value;
+    const qty = Number(document.getElementById('stockOutQty').value) || 0;
+    const notes = document.getElementById('stockOutNotes').value.trim();
+
+    if (!ingId || qty <= 0) {
+      this.showToast('Pilih bahan dan masukkan jumlah yang valid', 'warning');
+      return;
+    }
+
+    const ing = this.dm.getIngredientById(ingId);
+    if (!ing) return;
+
+    if (qty > ing.stock) {
+      this.showToast(`Stok ${ing.name} tidak cukup! Tersisa ${ing.stock} ${ing.unit}`, 'warning');
+      return;
+    }
+
+    this.dm.adjustStock(ingId, 'out', qty, ing.lastPrice, date, '', notes || `Pemakaian produksi`);
+
+    this.hideModal('modalStockOut');
+    this.showToast(`Stok ${ing.name} berkurang -${qty} ${ing.unit}`, 'success');
+    this.renderCurrentView();
+  }
+
+  // --- Helper: Populate ingredient select dropdown ---
+  _populateStockIngredientSelect(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    select.innerHTML = '<option value="">-- Pilih Bahan --</option>';
+    const ingredients = this.dm.getIngredients(true);
+
+    // Group by category
+    const grouped = {};
+    ingredients.forEach(ing => {
+      if (!grouped[ing.category]) grouped[ing.category] = [];
+      grouped[ing.category].push(ing);
+    });
+
+    Object.keys(grouped).sort().forEach(cat => {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = cat;
+      grouped[cat].forEach(ing => {
+        const opt = document.createElement('option');
+        opt.value = ing.id;
+        opt.textContent = `${ing.name} (stok: ${ing.stock || 0} ${ing.unit})`;
+        optgroup.appendChild(opt);
+      });
+      select.appendChild(optgroup);
+    });
+  }
+
+  // --- Expense ↔ Master Bahan Integration ---
+
+  /**
+   * Called when expense category changes - show/hide ingredient link section
+   */
+  onExpenseCategoryChanged() {
+    const category = document.getElementById('expenseCategory').value;
+    const linkGroup = document.getElementById('expenseIngredientLinkGroup');
+    if (!linkGroup) return;
+
+    if (category === 'Bahan Baku') {
+      linkGroup.style.display = 'block';
+      this._populateExpenseIngredientSelect();
+    } else {
+      linkGroup.style.display = 'none';
+      const linkSelect = document.getElementById('expenseIngredientLink');
+      if (linkSelect) linkSelect.value = '';
+    }
+  }
+
+  _populateExpenseIngredientSelect() {
+    const select = document.getElementById('expenseIngredientLink');
+    if (!select) return;
+
+    select.innerHTML = `
+      <option value="">-- Tidak ditautkan --</option>
+      <option value="__NEW__">➕ Tambah Sebagai Bahan Baru di Master Bahan...</option>
+    `;
+    const ingredients = this.dm.getIngredients(true);
+
+    ingredients.forEach(ing => {
+      const opt = document.createElement('option');
+      opt.value = ing.id;
+      opt.textContent = `${ing.name} (stok: ${ing.stock || 0} ${ing.unit})`;
+      select.appendChild(opt);
+    });
+
+    // Populate category and unit selects for new ingredient
+    const catSelect = document.getElementById('expenseNewIngCategory');
+    if (catSelect && catSelect.children.length === 0) {
+      catSelect.innerHTML = INGREDIENT_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+    const unitSelect = document.getElementById('expenseNewIngUnit');
+    if (unitSelect && unitSelect.children.length === 0) {
+      unitSelect.innerHTML = HPP_UNIT_OPTIONS.map(u => `<option value="${u}">${u}</option>`).join('');
+    }
+  }
+
+  onExpenseIngredientLinkChanged() {
+    const ingId = document.getElementById('expenseIngredientLink').value;
+    const qtyGroup = document.getElementById('expenseIngredientQtyGroup');
+    const newGroup = document.getElementById('expenseNewIngredientGroup');
+    if (!qtyGroup) return;
+
+    if (ingId === '__NEW__') {
+      qtyGroup.style.display = 'none';
+      if (newGroup) {
+        newGroup.style.display = 'block';
+        const descInput = document.getElementById('expenseDescription');
+        const nameInput = document.getElementById('expenseNewIngName');
+        if (descInput && nameInput && !nameInput.value.trim()) {
+          nameInput.value = descInput.value.trim();
+        }
+      }
+    } else if (ingId) {
+      if (newGroup) newGroup.style.display = 'none';
+      qtyGroup.style.display = 'grid';
+      const ing = this.dm.getIngredientById(ingId);
+      if (ing) {
+        document.getElementById('expenseIngredientUnit').value = ing.unit;
+      }
+    } else {
+      qtyGroup.style.display = 'none';
+      if (newGroup) newGroup.style.display = 'none';
+    }
+  }
+
+  // ==========================================
+  // HPP CALCULATOR
+  // ==========================================
+
+  /**
+   * Opens the HPP Calculator modal.
+   * If editing a product, loads its existing ingredients.
+   * Otherwise starts fresh or from a template.
+   */
+  openHppCalculator() {
+    // Read current product form context
+    const prodName = document.getElementById('prodNameInput').value.trim() || 'Produk Baru';
+    const prodCategory = document.getElementById('prodCategoryInput').value;
+    const prodPrice = Number(document.getElementById('prodPriceInput').value) || 0;
+
+    // Display product info in the calculator banner
+    this.updateElementText('hppCalcProductName', prodName);
+    this.updateElementText('hppCalcCategory', prodCategory);
+    this.updateElementText('hppCalcSellingPrice', Utils.formatRupiah(prodPrice));
+
+    // Populate template dropdown
+    this._populateHppTemplateOptions();
+
+    // Load existing ingredients if editing, or use cached ones from this session
+    let ingredients = [];
+
+    if (this.editingProdId) {
+      const prod = this.dm.getProductById(this.editingProdId);
+      if (prod && prod.hppIngredients && prod.hppIngredients.length > 0) {
+        ingredients = JSON.parse(JSON.stringify(prod.hppIngredients)); // deep clone
+      }
+    }
+
+    // If we have cached ingredients from this session (user already opened calc), prefer those
+    if (this._currentHppIngredients && this._currentHppIngredients.length > 0) {
+      ingredients = JSON.parse(JSON.stringify(this._currentHppIngredients));
+    }
+
+    // If still empty, check if the category has a template
+    if (ingredients.length === 0 && DEFAULT_HPP_TEMPLATES[prodCategory]) {
+      ingredients = JSON.parse(JSON.stringify(DEFAULT_HPP_TEMPLATES[prodCategory]));
+    }
+
+    this._hppIngredients = ingredients;
+    this._hppSellingPrice = prodPrice;
+
+    this.renderHppIngredientsTable();
+    this.updateHppSummary();
+    this.showModal('modalHppCalc');
+  }
+
+  /**
+   * Populate HPP template dropdown with available categories
+   */
+  _populateHppTemplateOptions() {
+    const select = document.getElementById('hppTemplateSelect');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">-- Pilih Template Resep --</option>';
+    Object.keys(DEFAULT_HPP_TEMPLATES).forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat + ` (${DEFAULT_HPP_TEMPLATES[cat].length} bahan)`;
+      select.appendChild(opt);
+    });
+
+    // Pre-select current category
+    const currentCat = document.getElementById('prodCategoryInput').value;
+    if (DEFAULT_HPP_TEMPLATES[currentCat]) {
+      select.value = currentCat;
+    }
+  }
+
+  /**
+   * Load ingredient rows from a template category
+   */
+  loadHppTemplate(templateKey) {
+    if (!templateKey || !DEFAULT_HPP_TEMPLATES[templateKey]) {
+      this.showToast('Pilih template resep terlebih dahulu', 'warning');
+      return;
+    }
+
+    // Ask confirmation if there are already ingredients
+    if (this._hppIngredients.length > 0) {
+      if (!confirm('Memuat template akan mengganti daftar bahan saat ini. Lanjutkan?')) return;
+    }
+
+    this._hppIngredients = JSON.parse(JSON.stringify(DEFAULT_HPP_TEMPLATES[templateKey]));
+    this.renderHppIngredientsTable();
+    this.updateHppSummary();
+    this.showToast(`Template "${templateKey}" berhasil dimuat (${this._hppIngredients.length} bahan)`, 'success');
+  }
+
+  /**
+   * Add an empty ingredient row
+   */
+  addHppIngredientRow() {
+    this._hppIngredients.push({
+      name: '',
+      qty: 1,
+      unit: 'gram',
+      unitPrice: 0
+    });
+    this.renderHppIngredientsTable();
+
+    // Focus the new row's name input
+    setTimeout(() => {
+      const tbody = document.getElementById('hppIngredientsBody');
+      if (tbody) {
+        const lastRow = tbody.lastElementChild;
+        if (lastRow) {
+          const nameInput = lastRow.querySelector('.hpp-input-name');
+          if (nameInput) nameInput.focus();
+        }
+      }
+    }, 50);
+  }
+
+  /**
+   * Remove an ingredient row by index
+   */
+  removeHppIngredient(index) {
+    this._hppIngredients.splice(index, 1);
+    this.renderHppIngredientsTable();
+    this.updateHppSummary();
+  }
+
+  /**
+   * Render all ingredient rows in the HPP calculator table
+   */
+  renderHppIngredientsTable() {
+    const tbody = document.getElementById('hppIngredientsBody');
+    if (!tbody) return;
+
+    // Build datalist for ingredient auto-suggest from Master Bahan
+    let datalistEl = document.getElementById('hppBahanSuggest');
+    if (!datalistEl) {
+      datalistEl = document.createElement('datalist');
+      datalistEl.id = 'hppBahanSuggest';
+      document.body.appendChild(datalistEl);
+    }
+    const masterIngredients = this.dm.getIngredients(true);
+    datalistEl.innerHTML = masterIngredients.map(ing =>
+      `<option value="${this._escHtml(ing.name)}" data-id="${ing.id}">`
+    ).join('');
+
+    if (this._hppIngredients.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7">
+            <div class="hpp-empty-state">
+              <div class="hpp-empty-icon">📦</div>
+              <p><strong>Belum ada bahan</strong></p>
+              <p class="small">Klik "➕ Tambah Bahan" atau muat template resep untuk memulai</p>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    // Build unit options HTML
+    const unitOptionsHtml = HPP_UNIT_OPTIONS.map(u => `<option value="${u}">${u}</option>`).join('');
+
+    let html = '';
+    this._hppIngredients.forEach((ing, i) => {
+      const subtotal = (ing.qty || 0) * (ing.unitPrice || 0);
+      const masterIng = ing.name ? this.dm.findIngredientByName(ing.name.trim()) : null;
+
+      let masterBadgeHtml = '';
+      if (masterIng) {
+        const isLow = masterIng.stock <= masterIng.minStock;
+        const isEmpty = masterIng.stock <= 0;
+        const badgeClass = isEmpty ? 'stock-badge-empty' : (isLow ? 'stock-badge-low' : 'stock-badge-ok');
+        const badgeIcon = isEmpty ? '🔴' : (isLow ? '⚠️' : '✅');
+        masterBadgeHtml = `
+          <div style="font-size: 0.72rem; margin-top: 3px; display: flex; align-items: center; gap: 4px;">
+            <span class="stock-badge ${badgeClass}" style="padding: 1px 6px; font-size: 0.68rem;" title="Bahan terdaftar di Master Bahan">
+              ${badgeIcon} Stok: ${masterIng.stock} ${masterIng.unit}
+            </span>
+          </div>
+        `;
+      } else if (ing.name && ing.name.trim()) {
+        masterBadgeHtml = `
+          <div style="font-size: 0.72rem; margin-top: 3px; display: flex; align-items: center; gap: 4px; color: var(--color-text-secondary);">
+            <span>Belum di Master</span>
+            <button type="button" class="btn btn-xs btn-outline-primary" style="padding: 1px 5px; font-size: 0.65rem;" onclick="app.quickAddHppIngToMaster(${i})" title="Daftarkan bahan ini ke Master Bahan">
+              + Simpan ke Master
+            </button>
+          </div>
+        `;
+      }
+
+      html += `
+        <tr>
+          <td class="hpp-row-num">${i + 1}</td>
+          <td>
+            <input type="text" class="hpp-input hpp-input-name" value="${this._escHtml(ing.name)}"
+              placeholder="Nama bahan..." data-idx="${i}" data-field="name" list="hppBahanSuggest"
+              onchange="app.onHppIngredientNameChanged(${i}, this.value)">
+            ${masterBadgeHtml}
+          </td>
+          <td>
+            <input type="number" class="hpp-input hpp-input-qty" value="${ing.qty}"
+              min="0" step="0.01" data-idx="${i}" data-field="qty"
+              oninput="app.updateHppIngredient(${i}, 'qty', this.value)">
+          </td>
+          <td>
+            <select class="hpp-select" data-idx="${i}" data-field="unit"
+              onchange="app.updateHppIngredient(${i}, 'unit', this.value)">
+              ${HPP_UNIT_OPTIONS.map(u =>
+                `<option value="${u}" ${u === ing.unit ? 'selected' : ''}>${u}</option>`
+              ).join('')}
+            </select>
+          </td>
+          <td>
+            <input type="number" class="hpp-input hpp-input-number" value="${ing.unitPrice}"
+              min="0" step="100" data-idx="${i}" data-field="unitPrice"
+              oninput="app.updateHppIngredient(${i}, 'unitPrice', this.value)">
+          </td>
+          <td class="hpp-subtotal">${Utils.formatRupiah(subtotal)}</td>
+          <td class="text-center">
+            <button type="button" class="btn-remove-ingredient" title="Hapus bahan"
+              onclick="app.removeHppIngredient(${i})">✕</button>
+          </td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = html;
+  }
+
+  /**
+   * Quick add an ingredient from HPP calculator to Master Bahan
+   */
+  quickAddHppIngToMaster(index) {
+    const ing = this._hppIngredients[index];
+    if (!ing || !ing.name || !ing.name.trim()) return;
+
+    const nameTrim = ing.name.trim();
+    const nameLower = nameTrim.toLowerCase();
+    let cat = 'Lainnya';
+    if (nameLower.includes('tepung') || nameLower.includes('maizena')) cat = 'Tepung & Pati';
+    else if (nameLower.includes('telur') || nameLower.includes('susu')) cat = 'Telur & Susu';
+    else if (nameLower.includes('gula') || nameLower.includes('pemanis')) cat = 'Gula & Pemanis';
+    else if (nameLower.includes('mentega') || nameLower.includes('margarin') || nameLower.includes('minyak')) cat = 'Lemak & Minyak';
+    else if (nameLower.includes('coklat') || nameLower.includes('chocolate') || nameLower.includes('kakao')) cat = 'Coklat & Kakao';
+    else if (nameLower.includes('keju') || nameLower.includes('santan') || nameLower.includes('dairy')) cat = 'Keju & Dairy';
+    else if (nameLower.includes('baking') || nameLower.includes('ragi') || nameLower.includes('pengembang')) cat = 'Pengembang & Pengemulsi';
+    else if (nameLower.includes('vanili') || nameLower.includes('pandan') || nameLower.includes('perisa') || nameLower.includes('garam')) cat = 'Perisa & Pewarna';
+    else if (nameLower.includes('box') || nameLower.includes('kemasan') || nameLower.includes('plastik') || nameLower.includes('toples') || nameLower.includes('label')) cat = 'Kemasan';
+    else if (nameLower.includes('gas') || nameLower.includes('elpiji')) cat = 'Bahan Bakar';
+
+    const newIng = this.dm.addIngredient({
+      name: nameTrim,
+      category: cat,
+      unit: ing.unit || 'gram',
+      lastPrice: ing.unitPrice || 0,
+      stock: 0,
+      minStock: 0,
+      active: true
+    });
+
+    this.renderHppIngredientsTable();
+    this.showToast(`Bahan "${newIng.name}" berhasil ditambahkan ke Master Bahan!`, 'success');
+  }
+
+  /**
+   * Save all ingredients in the current HPP recipe that are not yet in Master Bahan
+   */
+  saveAllHppIngredientsToMaster() {
+    if (!this._hppIngredients || this._hppIngredients.length === 0) {
+      this.showToast('Tidak ada bahan untuk disimpan', 'warning');
+      return;
+    }
+
+    let addedCount = 0;
+    this._hppIngredients.forEach(ing => {
+      if (!ing.name || !ing.name.trim()) return;
+      const nameTrim = ing.name.trim();
+      const existing = this.dm.findIngredientByName(nameTrim);
+      if (!existing) {
+        const nameLower = nameTrim.toLowerCase();
+        let cat = 'Lainnya';
+        if (nameLower.includes('tepung') || nameLower.includes('maizena')) cat = 'Tepung & Pati';
+        else if (nameLower.includes('telur') || nameLower.includes('susu')) cat = 'Telur & Susu';
+        else if (nameLower.includes('gula')) cat = 'Gula & Pemanis';
+        else if (nameLower.includes('mentega') || nameLower.includes('margarin') || nameLower.includes('minyak')) cat = 'Lemak & Minyak';
+        else if (nameLower.includes('coklat') || nameLower.includes('chocolate')) cat = 'Coklat & Kakao';
+        else if (nameLower.includes('keju') || nameLower.includes('santan')) cat = 'Keju & Dairy';
+        else if (nameLower.includes('baking') || nameLower.includes('ragi')) cat = 'Pengembang & Pengemulsi';
+        else if (nameLower.includes('vanili') || nameLower.includes('pandan') || nameLower.includes('garam')) cat = 'Perisa & Pewarna';
+        else if (nameLower.includes('box') || nameLower.includes('kemasan') || nameLower.includes('plastik') || nameLower.includes('toples') || nameLower.includes('label')) cat = 'Kemasan';
+        else if (nameLower.includes('gas') || nameLower.includes('elpiji')) cat = 'Bahan Bakar';
+
+        this.dm.addIngredient({
+          name: nameTrim,
+          category: cat,
+          unit: ing.unit || 'gram',
+          lastPrice: ing.unitPrice || 0,
+          stock: 0,
+          minStock: 0,
+          active: true
+        });
+        addedCount++;
+      }
+    });
+
+    this.renderHppIngredientsTable();
+    if (addedCount > 0) {
+      this.showToast(`${addedCount} bahan baru berhasil didaftarkan ke Master Bahan!`, 'success');
+    } else {
+      this.showToast('Semua bahan dalam resep ini sudah terdaftar di Master Bahan', 'info');
+    }
+  }
+
+  /**
+   * When an HPP ingredient name is changed, check if it matches a master bahan
+   * and auto-fill the unit price from master data.
+   */
+  onHppIngredientNameChanged(index, name) {
+    this.updateHppIngredient(index, 'name', name);
+
+    // Try to find matching ingredient in master bahan
+    const masterIng = this.dm.findIngredientByName(name);
+    if (masterIng) {
+      // Auto-fill unit price and unit from master data
+      this._hppIngredients[index].unitPrice = masterIng.lastPrice;
+      this._hppIngredients[index].unit = masterIng.unit;
+      // Re-render to show updated values
+      this.renderHppIngredientsTable();
+      this.updateHppSummary();
+      this.showToast(`Harga ${masterIng.name} dimuat dari Master Bahan: ${Utils.formatRupiah(masterIng.lastPrice)}/${masterIng.unit}`, 'info');
+    }
+  }
+
+  /**
+   * Helper to escape HTML in template literals
+   */
+  _escHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /**
+   * Update a single ingredient field and recalculate
+   */
+  updateHppIngredient(index, field, value) {
+    if (!this._hppIngredients[index]) return;
+
+    if (field === 'qty' || field === 'unitPrice') {
+      this._hppIngredients[index][field] = Number(value) || 0;
+    } else {
+      this._hppIngredients[index][field] = value;
+    }
+
+    // Update the subtotal for this row visually
+    const tbody = document.getElementById('hppIngredientsBody');
+    if (tbody) {
+      const row = tbody.children[index];
+      if (row) {
+        const subtotalCell = row.querySelector('.hpp-subtotal');
+        if (subtotalCell) {
+          const ing = this._hppIngredients[index];
+          const subtotal = (ing.qty || 0) * (ing.unitPrice || 0);
+          subtotalCell.textContent = Utils.formatRupiah(subtotal);
+        }
+      }
+    }
+
+    this.updateHppSummary();
+  }
+
+  /**
+   * Recalculate and display HPP summary (total cost, margin estimate, item count)
+   */
+  updateHppSummary() {
+    const totalCost = this._hppIngredients.reduce((sum, ing) => {
+      return sum + ((ing.qty || 0) * (ing.unitPrice || 0));
+    }, 0);
+
+    const itemCount = this._hppIngredients.filter(ing => ing.name && ing.name.trim()).length;
+    const sellingPrice = this._hppSellingPrice || 0;
+    const margin = sellingPrice - totalCost;
+    const marginPct = sellingPrice > 0 ? ((margin / sellingPrice) * 100).toFixed(1) : 0;
+
+    this.updateElementText('hppTotalItems', `${itemCount} item`);
+    this.updateElementText('hppTotalCost', Utils.formatRupiah(totalCost));
+
+    const marginEl = document.getElementById('hppMarginEstimate');
+    if (marginEl) {
+      marginEl.textContent = `${Utils.formatRupiah(margin)} (${marginPct}%)`;
+      marginEl.style.color = margin >= 0 ? 'var(--color-income)' : 'var(--color-expense)';
+    }
+  }
+
+  /**
+   * Apply the calculated HPP total back to the product form
+   */
+  applyHppResult() {
+    const totalCost = this._hppIngredients.reduce((sum, ing) => {
+      return sum + ((ing.qty || 0) * (ing.unitPrice || 0));
+    }, 0);
+
+    // Round to nearest whole number
+    const roundedCost = Math.round(totalCost);
+
+    // Set the costPrice input
+    const costInput = document.getElementById('prodCostInput');
+    if (costInput) {
+      costInput.value = roundedCost;
+      // Trigger input event for margin recalculation
+      costInput.dispatchEvent(new Event('input'));
+    }
+
+    // Cache the ingredients for saving with the product
+    this._currentHppIngredients = JSON.parse(JSON.stringify(this._hppIngredients));
+
+    this.hideModal('modalHppCalc');
+    this.showToast(`HPP dihitung: ${Utils.formatRupiah(roundedCost)} dari ${this._hppIngredients.length} bahan`, 'success');
+  }
+
+  /**
+   * Clear all ingredients in the HPP calculator
+   */
+  clearAllHppIngredients() {
+    if (this._hppIngredients.length === 0) return;
+    if (!confirm('Hapus semua bahan dari daftar?')) return;
+
+    this._hppIngredients = [];
+    this.renderHppIngredientsTable();
+    this.updateHppSummary();
+  }
+
+  /**
+   * Open HPP calculator directly from the products table for a specific product
+   */
+  openHppCalcForProduct(prodId) {
+    const prod = this.dm.getProductById(prodId);
+    if (!prod) return;
+
+    // Pre-fill the product modal first, then open HPP calc
+    this.editProduct(prodId);
+
+    // Small delay to let the modal render, then open HPP calc on top
+    setTimeout(() => {
+      this.openHppCalculator();
+    }, 150);
   }
 
   // --- Recurring Expenses Manager Modal ---
@@ -1358,6 +2372,26 @@ class CashflowApp {
     const productForm = document.getElementById('productForm');
     if (productForm) productForm.addEventListener('submit', e => this.saveProductForm(e));
 
+    // Ingredient form submit
+    const ingredientForm = document.getElementById('ingredientForm');
+    if (ingredientForm) ingredientForm.addEventListener('submit', e => this.saveIngredientForm(e));
+
+    // Stock In form submit
+    const stockInForm = document.getElementById('stockInForm');
+    if (stockInForm) stockInForm.addEventListener('submit', e => this.saveStockInForm(e));
+
+    // Stock Out form submit
+    const stockOutForm = document.getElementById('stockOutForm');
+    if (stockOutForm) stockOutForm.addEventListener('submit', e => this.saveStockOutForm(e));
+
+    // Expense category change → show/hide ingredient link
+    const expenseCat = document.getElementById('expenseCategory');
+    if (expenseCat) expenseCat.addEventListener('change', () => this.onExpenseCategoryChanged());
+
+    // Expense ingredient link change → show/hide qty fields
+    const expenseIngLink = document.getElementById('expenseIngredientLink');
+    if (expenseIngLink) expenseIngLink.addEventListener('change', () => this.onExpenseIngredientLinkChanged());
+
     // Recurring Form Submit
     const recurringForm = document.getElementById('addRecurringForm');
     if (recurringForm) recurringForm.addEventListener('submit', e => this.addRecurringItem(e));
@@ -1477,6 +2511,31 @@ class CashflowApp {
       });
     }
 
+    // Ingredient filter listeners
+    const ingSearch = document.getElementById('ingredientSearchInput');
+    if (ingSearch) {
+      ingSearch.addEventListener('input', () => {
+        this.ingredientFilter.search = ingSearch.value;
+        this.renderIngredientsTable();
+      });
+    }
+
+    const ingCatFilter = document.getElementById('ingredientCategoryFilter');
+    if (ingCatFilter) {
+      ingCatFilter.addEventListener('change', () => {
+        this.ingredientFilter.category = ingCatFilter.value;
+        this.renderIngredientsTable();
+      });
+    }
+
+    const ingStockFilter = document.getElementById('ingredientStockFilter');
+    if (ingStockFilter) {
+      ingStockFilter.addEventListener('change', () => {
+        this.ingredientFilter.stockStatus = ingStockFilter.value;
+        this.renderIngredientsTable();
+      });
+    }
+
     // Close Modal buttons
     document.querySelectorAll('[data-close-modal]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1559,5 +2618,124 @@ class CashflowApp {
   updateElementText(id, text) {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
+  }
+
+  // ==========================================
+  // SQLITE DATABASE STATUS & MANAGEMENT
+  // ==========================================
+
+  updateDbStatusBadge(detail) {
+    const dot = document.getElementById('dbStatusDot');
+    const text = document.getElementById('dbStatusText');
+    const badge = document.getElementById('dbStatusBadge');
+    if (!dot || !text) return;
+
+    if (detail && detail.connected) {
+      dot.className = 'db-dot online';
+      text.textContent = 'SQLite Aktif';
+      if (badge) {
+        badge.title = 'Terhubung ke database SQLite (bolu_bu_eko.db). Semua transaksi tersimpan di database file.';
+        badge.style.borderColor = 'var(--color-income)';
+      }
+    } else {
+      dot.className = 'db-dot offline';
+      text.textContent = 'Mode Offline';
+      if (badge) {
+        badge.title = 'Mode offline lokal browser. Jalankan start_server.bat untuk menyimpan ke file database SQLite.';
+        badge.style.borderColor = 'var(--color-warning)';
+      }
+    }
+  }
+
+  async showDbInfoModal() {
+    const container = document.getElementById('dbModalContent');
+    if (!container) return;
+
+    const isConnected = this.dm.isUsingDb;
+    const info = this.dm.dbInfo;
+
+    if (isConnected && info) {
+      const counts = info.counts || {};
+      const sizeKb = info.sizeBytes ? (info.sizeBytes / 1024).toFixed(1) : 0;
+
+      container.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem; background: var(--color-income-soft); border-radius: var(--radius-md); margin-bottom: 1rem;">
+          <span style="font-size: 1.8rem;">🟢</span>
+          <div>
+            <div style="font-weight: 700; color: var(--color-income); font-size: 1rem;">Database SQLite Terhubung</div>
+            <div class="small text-muted">File: <code>${info.file}</code> (${sizeKb} KB)</div>
+          </div>
+        </div>
+
+        <div class="small text-muted" style="line-height: 1.5; margin-bottom: 0.5rem;">
+          Semua transaksi pemasukan, pengeluaran, katalog bolu, master bahan baku, dan riwayat mutasi stok tersimpan langsung ke file database SQLite <strong>${info.file}</strong> di komputer toko Anda.
+        </div>
+
+        <div class="db-info-grid">
+          <div class="db-info-card">
+            <div class="db-info-num">${counts.transactions || 0}</div>
+            <div class="db-info-title">Transaksi Kas</div>
+          </div>
+          <div class="db-info-card">
+            <div class="db-info-num">${counts.products || 0}</div>
+            <div class="db-info-title">Produk Bolu</div>
+          </div>
+          <div class="db-info-card">
+            <div class="db-info-num">${counts.ingredients || 0}</div>
+            <div class="db-info-title">Master Bahan</div>
+          </div>
+          <div class="db-info-card">
+            <div class="db-info-num">${counts.stock_log || 0}</div>
+            <div class="db-info-title">Mutasi Stok</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 1rem; padding: 0.75rem; background: var(--color-bg); border-radius: var(--radius-sm); border: 1px solid var(--color-border); font-size: 0.78rem;">
+          <strong>💡 Tips Multi-User:</strong> Perangkat lain (HP / tablet kasir / laptop) di jaringan WiFi toko dapat mengakses aplikasi ini dengan membuka alamat: <code>http://[IP-Komputer-Ini]:5000</code>.
+        </div>
+      `;
+    } else {
+      container.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem; background: var(--color-warning-soft); border-radius: var(--radius-md); margin-bottom: 1rem;">
+          <span style="font-size: 1.8rem;">📁</span>
+          <div>
+            <div style="font-weight: 700; color: var(--color-warning); font-size: 1rem;">Mode Offline (Browser Storage)</div>
+            <div class="small text-muted">Aplikasi dibuka langsung via file browser</div>
+          </div>
+        </div>
+
+        <p class="small text-muted" style="line-height: 1.6;">
+          Saat ini aplikasi sedang berjalan dalam mode offline (data tersimpan di memori browser). Untuk mengaktifkan penyimpanan ke <strong>file database SQLite (bolu_bu_eko.db)</strong>:
+        </p>
+
+        <ol class="small" style="padding-left: 1.25rem; line-height: 1.8; color: var(--color-text);">
+          <li>Buka folder proyek <code>cashflow Bolu Bu Eko</code>.</li>
+          <li>Double-click file <strong><code>start_server.bat</code></strong>.</li>
+          <li>Aplikasi akan otomatis terbuka di browser pada <code>http://localhost:5000</code> dan terhubung ke database SQLite.</li>
+        </ol>
+
+        <div style="margin-top: 0.75rem; text-align: center;">
+          <button type="button" class="btn btn-primary btn-sm" onclick="app.refreshDbStatus()">
+            🔄 Coba Hubungkan ke Server SQLite
+          </button>
+        </div>
+      `;
+    }
+
+    this.showModal('modalDbInfo');
+  }
+
+  async refreshDbStatus() {
+    this.showToast('Memeriksa koneksi database SQLite...', 'info');
+    const connected = await this.dm.checkDatabaseConnection();
+    if (connected) {
+      this.showToast('✅ Berhasil terhubung ke database SQLite (bolu_bu_eko.db)!', 'success');
+      this.renderCurrentView();
+      if (document.getElementById('modalDbInfo').classList.contains('show')) {
+        this.showDbInfoModal();
+      }
+    } else {
+      this.showToast('Server lokal belum berjalan. Buka start_server.bat untuk mengaktifkannya.', 'warning');
+    }
   }
 }

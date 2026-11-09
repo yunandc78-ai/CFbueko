@@ -1,0 +1,4 @@
+# Bolu Bu Eko - Cashflow Management
+# Backend relies entirely on standard Python 3.12 library (sqlite3, http.server, json, urllib)
+# Zero external packages required for lightweight and fast execution.
+

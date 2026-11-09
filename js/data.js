@@ -9,8 +9,116 @@ const STORAGE_KEYS = {
   PRODUCTS: 'bolu_bu_eko_products_v1',
   RECURRING: 'bolu_bu_eko_recurring_v1',
   PROFILE: 'bolu_bu_eko_profile_v1',
-  SETTINGS: 'bolu_bu_eko_settings_v1'
+  SETTINGS: 'bolu_bu_eko_settings_v1',
+  INGREDIENTS: 'bolu_bu_eko_ingredients_v1',
+  STOCK_LOG: 'bolu_bu_eko_stock_log_v1'
 };
+
+// Default HPP Ingredient Templates for common bakery products
+const DEFAULT_HPP_TEMPLATES = {
+  'Bolu Original': [
+    { name: 'Tepung Terigu', qty: 0.5, unit: 'kg', unitPrice: 14000 },
+    { name: 'Telur Ayam', qty: 6, unit: 'butir', unitPrice: 2500 },
+    { name: 'Gula Pasir', qty: 0.25, unit: 'kg', unitPrice: 16000 },
+    { name: 'Mentega/Margarin', qty: 0.15, unit: 'kg', unitPrice: 30000 },
+    { name: 'Susu Cair', qty: 0.15, unit: 'liter', unitPrice: 18000 },
+    { name: 'Vanili', qty: 1, unit: 'sdt', unitPrice: 500 },
+    { name: 'Baking Powder', qty: 1, unit: 'sdt', unitPrice: 300 },
+    { name: 'Kemasan & Label', qty: 1, unit: 'pcs', unitPrice: 3000 },
+    { name: 'Gas Oven (estimasi)', qty: 1, unit: 'porsi', unitPrice: 2000 }
+  ],
+  'Bolu Coklat': [
+    { name: 'Tepung Terigu', qty: 0.5, unit: 'kg', unitPrice: 14000 },
+    { name: 'Telur Ayam', qty: 6, unit: 'butir', unitPrice: 2500 },
+    { name: 'Gula Pasir', qty: 0.25, unit: 'kg', unitPrice: 16000 },
+    { name: 'Mentega/Margarin', qty: 0.15, unit: 'kg', unitPrice: 30000 },
+    { name: 'Coklat Bubuk', qty: 0.05, unit: 'kg', unitPrice: 80000 },
+    { name: 'Dark Cooking Chocolate', qty: 0.1, unit: 'kg', unitPrice: 60000 },
+    { name: 'Susu Cair', qty: 0.15, unit: 'liter', unitPrice: 18000 },
+    { name: 'Baking Powder', qty: 1, unit: 'sdt', unitPrice: 300 },
+    { name: 'Kemasan & Label', qty: 1, unit: 'pcs', unitPrice: 3000 },
+    { name: 'Gas Oven (estimasi)', qty: 1, unit: 'porsi', unitPrice: 2000 }
+  ],
+  'Bolu Keju': [
+    { name: 'Tepung Terigu', qty: 0.5, unit: 'kg', unitPrice: 14000 },
+    { name: 'Telur Ayam', qty: 6, unit: 'butir', unitPrice: 2500 },
+    { name: 'Gula Pasir', qty: 0.2, unit: 'kg', unitPrice: 16000 },
+    { name: 'Mentega/Margarin', qty: 0.15, unit: 'kg', unitPrice: 30000 },
+    { name: 'Keju Cheddar', qty: 0.15, unit: 'kg', unitPrice: 80000 },
+    { name: 'Keju Parut (topping)', qty: 0.05, unit: 'kg', unitPrice: 80000 },
+    { name: 'Susu Cair', qty: 0.15, unit: 'liter', unitPrice: 18000 },
+    { name: 'Baking Powder', qty: 1, unit: 'sdt', unitPrice: 300 },
+    { name: 'Kemasan & Label', qty: 1, unit: 'pcs', unitPrice: 3000 },
+    { name: 'Gas Oven (estimasi)', qty: 1, unit: 'porsi', unitPrice: 2000 }
+  ],
+  'Bolu Pandan': [
+    { name: 'Tepung Terigu', qty: 0.5, unit: 'kg', unitPrice: 14000 },
+    { name: 'Telur Ayam', qty: 6, unit: 'butir', unitPrice: 2500 },
+    { name: 'Gula Pasir', qty: 0.25, unit: 'kg', unitPrice: 16000 },
+    { name: 'Mentega/Margarin', qty: 0.15, unit: 'kg', unitPrice: 30000 },
+    { name: 'Santan Kelapa', qty: 0.2, unit: 'liter', unitPrice: 20000 },
+    { name: 'Pasta Pandan', qty: 1, unit: 'sdt', unitPrice: 1500 },
+    { name: 'Daun Pandan (sari)', qty: 5, unit: 'lembar', unitPrice: 200 },
+    { name: 'Baking Powder', qty: 1, unit: 'sdt', unitPrice: 300 },
+    { name: 'Kemasan & Label', qty: 1, unit: 'pcs', unitPrice: 3000 },
+    { name: 'Gas Oven (estimasi)', qty: 1, unit: 'porsi', unitPrice: 2000 }
+  ],
+  'Bolu Marble': [
+    { name: 'Tepung Terigu', qty: 0.5, unit: 'kg', unitPrice: 14000 },
+    { name: 'Telur Ayam', qty: 6, unit: 'butir', unitPrice: 2500 },
+    { name: 'Gula Pasir', qty: 0.25, unit: 'kg', unitPrice: 16000 },
+    { name: 'Mentega/Margarin', qty: 0.2, unit: 'kg', unitPrice: 30000 },
+    { name: 'Coklat Bubuk', qty: 0.03, unit: 'kg', unitPrice: 80000 },
+    { name: 'Susu Cair', qty: 0.15, unit: 'liter', unitPrice: 18000 },
+    { name: 'Vanili', qty: 1, unit: 'sdt', unitPrice: 500 },
+    { name: 'Baking Powder', qty: 1, unit: 'sdt', unitPrice: 300 },
+    { name: 'Kemasan & Label', qty: 1, unit: 'pcs', unitPrice: 3000 },
+    { name: 'Gas Oven (estimasi)', qty: 1, unit: 'porsi', unitPrice: 2000 }
+  ],
+  'Kue Kering': [
+    { name: 'Tepung Terigu', qty: 0.5, unit: 'kg', unitPrice: 14000 },
+    { name: 'Mentega/Margarin', qty: 0.3, unit: 'kg', unitPrice: 30000 },
+    { name: 'Gula Halus', qty: 0.15, unit: 'kg', unitPrice: 22000 },
+    { name: 'Telur Ayam', qty: 3, unit: 'butir', unitPrice: 2500 },
+    { name: 'Keju Edam', qty: 0.2, unit: 'kg', unitPrice: 120000 },
+    { name: 'Maizena', qty: 0.05, unit: 'kg', unitPrice: 20000 },
+    { name: 'Toples Kemasan', qty: 1, unit: 'pcs', unitPrice: 5000 },
+    { name: 'Gas Oven (estimasi)', qty: 1, unit: 'porsi', unitPrice: 2500 }
+  ],
+  'Roti': [
+    { name: 'Tepung Terigu Cakra', qty: 0.5, unit: 'kg', unitPrice: 16000 },
+    { name: 'Ragi Instan', qty: 1, unit: 'sdt', unitPrice: 1000 },
+    { name: 'Gula Pasir', qty: 0.05, unit: 'kg', unitPrice: 16000 },
+    { name: 'Mentega/Margarin', qty: 0.1, unit: 'kg', unitPrice: 30000 },
+    { name: 'Telur Ayam', qty: 2, unit: 'butir', unitPrice: 2500 },
+    { name: 'Susu Bubuk', qty: 0.02, unit: 'kg', unitPrice: 60000 },
+    { name: 'Garam', qty: 0.5, unit: 'sdt', unitPrice: 100 },
+    { name: 'Kemasan Plastik', qty: 1, unit: 'pcs', unitPrice: 1000 },
+    { name: 'Gas Oven (estimasi)', qty: 1, unit: 'porsi', unitPrice: 1500 }
+  ]
+};
+
+// Unit options for HPP ingredient calculator
+const HPP_UNIT_OPTIONS = [
+  'kg', 'gram', 'liter', 'ml', 'butir', 'pcs', 'lembar',
+  'sdt', 'sdm', 'porsi', 'bungkus', 'sachet', 'kaleng', 'botol'
+];
+
+// Ingredient categories for Master Bahan
+const INGREDIENT_CATEGORIES = [
+  'Tepung & Pati',
+  'Telur & Susu',
+  'Gula & Pemanis',
+  'Lemak & Minyak',
+  'Coklat & Kakao',
+  'Keju & Dairy',
+  'Buah & Kacang',
+  'Perisa & Pewarna',
+  'Pengembang & Pengemulsi',
+  'Kemasan',
+  'Bahan Bakar',
+  'Lainnya'
+];
 
 // Default Bakery Profile
 const DEFAULT_PROFILE = {
@@ -76,6 +184,51 @@ function relativeDate(daysOffset) {
   return toDateInputValue(d);
 }
 
+// Default Master Bahan (Ingredients) Seed Data
+function getDefaultIngredients() {
+  return [
+    { id: 'ing_1', name: 'Tepung Terigu Segitiga Biru', unit: 'kg', lastPrice: 14000, stock: 25, minStock: 5, category: 'Tepung & Pati', active: true },
+    { id: 'ing_2', name: 'Tepung Terigu Cakra Kembar', unit: 'kg', lastPrice: 16000, stock: 15, minStock: 5, category: 'Tepung & Pati', active: true },
+    { id: 'ing_3', name: 'Maizena', unit: 'kg', lastPrice: 20000, stock: 3, minStock: 1, category: 'Tepung & Pati', active: true },
+    { id: 'ing_4', name: 'Telur Ayam', unit: 'butir', lastPrice: 2500, stock: 120, minStock: 30, category: 'Telur & Susu', active: true },
+    { id: 'ing_5', name: 'Susu Cair UHT', unit: 'liter', lastPrice: 18000, stock: 8, minStock: 3, category: 'Telur & Susu', active: true },
+    { id: 'ing_6', name: 'Susu Bubuk', unit: 'kg', lastPrice: 60000, stock: 2, minStock: 1, category: 'Telur & Susu', active: true },
+    { id: 'ing_7', name: 'Gula Pasir', unit: 'kg', lastPrice: 16000, stock: 20, minStock: 5, category: 'Gula & Pemanis', active: true },
+    { id: 'ing_8', name: 'Gula Halus', unit: 'kg', lastPrice: 22000, stock: 5, minStock: 2, category: 'Gula & Pemanis', active: true },
+    { id: 'ing_9', name: 'Mentega / Margarin', unit: 'kg', lastPrice: 30000, stock: 10, minStock: 3, category: 'Lemak & Minyak', active: true },
+    { id: 'ing_10', name: 'Mentega Wisman', unit: 'kg', lastPrice: 40000, stock: 5, minStock: 2, category: 'Lemak & Minyak', active: true },
+    { id: 'ing_11', name: 'Minyak Goreng', unit: 'liter', lastPrice: 18000, stock: 5, minStock: 2, category: 'Lemak & Minyak', active: true },
+    { id: 'ing_12', name: 'Coklat Bubuk', unit: 'kg', lastPrice: 80000, stock: 3, minStock: 1, category: 'Coklat & Kakao', active: true },
+    { id: 'ing_13', name: 'Dark Cooking Chocolate', unit: 'kg', lastPrice: 60000, stock: 4, minStock: 1, category: 'Coklat & Kakao', active: true },
+    { id: 'ing_14', name: 'Keju Cheddar', unit: 'kg', lastPrice: 80000, stock: 3, minStock: 1, category: 'Keju & Dairy', active: true },
+    { id: 'ing_15', name: 'Keju Edam', unit: 'kg', lastPrice: 120000, stock: 2, minStock: 1, category: 'Keju & Dairy', active: true },
+    { id: 'ing_16', name: 'Santan Kelapa', unit: 'liter', lastPrice: 20000, stock: 5, minStock: 2, category: 'Keju & Dairy', active: true },
+    { id: 'ing_17', name: 'Cream of Tartar', unit: 'gram', lastPrice: 200, stock: 200, minStock: 50, category: 'Pengembang & Pengemulsi', active: true },
+    { id: 'ing_18', name: 'Baking Powder', unit: 'gram', lastPrice: 60, stock: 500, minStock: 100, category: 'Pengembang & Pengemulsi', active: true },
+    { id: 'ing_19', name: 'Ragi Instan', unit: 'gram', lastPrice: 100, stock: 200, minStock: 50, category: 'Pengembang & Pengemulsi', active: true },
+    { id: 'ing_20', name: 'Vanili Bubuk', unit: 'gram', lastPrice: 50, stock: 100, minStock: 30, category: 'Perisa & Pewarna', active: true },
+    { id: 'ing_21', name: 'Pasta Pandan', unit: 'ml', lastPrice: 30, stock: 200, minStock: 50, category: 'Perisa & Pewarna', active: true },
+    { id: 'ing_22', name: 'Pisang Raja', unit: 'buah', lastPrice: 1500, stock: 30, minStock: 10, category: 'Buah & Kacang', active: true },
+    { id: 'ing_23', name: 'Kismis', unit: 'gram', lastPrice: 60, stock: 500, minStock: 100, category: 'Buah & Kacang', active: true },
+    { id: 'ing_24', name: 'Tape Singkong', unit: 'kg', lastPrice: 15000, stock: 5, minStock: 2, category: 'Buah & Kacang', active: true },
+    { id: 'ing_25', name: 'Kemasan Box Bolu', unit: 'pcs', lastPrice: 3000, stock: 100, minStock: 30, category: 'Kemasan', active: true },
+    { id: 'ing_26', name: 'Toples Kue Kering', unit: 'pcs', lastPrice: 5000, stock: 50, minStock: 15, category: 'Kemasan', active: true },
+    { id: 'ing_27', name: 'Kemasan Plastik Roti', unit: 'pcs', lastPrice: 1000, stock: 200, minStock: 50, category: 'Kemasan', active: true },
+    { id: 'ing_28', name: 'Label Stiker', unit: 'pcs', lastPrice: 500, stock: 300, minStock: 50, category: 'Kemasan', active: true },
+    { id: 'ing_29', name: 'Gas Elpiji 3kg', unit: 'tabung', lastPrice: 22000, stock: 5, minStock: 2, category: 'Bahan Bakar', active: true },
+    { id: 'ing_30', name: 'Garam', unit: 'gram', lastPrice: 4, stock: 1000, minStock: 200, category: 'Perisa & Pewarna', active: true }
+  ];
+}
+
+// Default Stock Log Seed Data
+function getDefaultStockLog() {
+  const d = new Date();
+  const today = d.toISOString().split('T')[0];
+  return [
+    { id: 'slog_init', ingredientId: 'all', ingredientName: 'Semua Bahan', type: 'in', qty: 0, unit: '-', unitPrice: 0, totalPrice: 0, date: today, reference: 'initial', notes: 'Stok awal sistem' }
+  ];
+}
+
 // Default Products Seed Data
 function getDefaultProducts() {
   return [
@@ -85,6 +238,16 @@ function getDefaultProducts() {
       category: 'Bolu Pandan',
       price: 45000,
       costPrice: 22000,
+      hppIngredients: [
+        { name: 'Tepung Terigu', qty: 0.4, unit: 'kg', unitPrice: 14000 },
+        { name: 'Telur Ayam', qty: 5, unit: 'butir', unitPrice: 2500 },
+        { name: 'Gula Pasir', qty: 0.15, unit: 'kg', unitPrice: 16000 },
+        { name: 'Santan Kelapa', qty: 0.15, unit: 'liter', unitPrice: 20000 },
+        { name: 'Pasta Pandan', qty: 1, unit: 'sdt', unitPrice: 1500 },
+        { name: 'Keju Parut (isian)', qty: 0.05, unit: 'kg', unitPrice: 80000 },
+        { name: 'Kemasan & Label', qty: 1, unit: 'pcs', unitPrice: 2500 },
+        { name: 'Gas Oven', qty: 1, unit: 'porsi', unitPrice: 2000 }
+      ],
       active: true,
       isFavorite: true
     },
@@ -94,6 +257,16 @@ function getDefaultProducts() {
       category: 'Bolu Keju',
       price: 50000,
       costPrice: 24000,
+      hppIngredients: [
+        { name: 'Tepung Terigu', qty: 0.45, unit: 'kg', unitPrice: 14000 },
+        { name: 'Telur Ayam', qty: 5, unit: 'butir', unitPrice: 2500 },
+        { name: 'Tape Singkong', qty: 0.2, unit: 'kg', unitPrice: 15000 },
+        { name: 'Keju Cheddar', qty: 0.1, unit: 'kg', unitPrice: 80000 },
+        { name: 'Gula Pasir', qty: 0.15, unit: 'kg', unitPrice: 16000 },
+        { name: 'Mentega', qty: 0.1, unit: 'kg', unitPrice: 30000 },
+        { name: 'Kemasan & Label', qty: 1, unit: 'pcs', unitPrice: 3000 },
+        { name: 'Gas Oven', qty: 1, unit: 'porsi', unitPrice: 2000 }
+      ],
       active: true,
       isFavorite: true
     },
@@ -103,6 +276,16 @@ function getDefaultProducts() {
       category: 'Bolu Coklat',
       price: 55000,
       costPrice: 26000,
+      hppIngredients: [
+        { name: 'Tepung Terigu', qty: 0.4, unit: 'kg', unitPrice: 14000 },
+        { name: 'Telur Ayam', qty: 6, unit: 'butir', unitPrice: 2500 },
+        { name: 'Dark Cooking Chocolate', qty: 0.1, unit: 'kg', unitPrice: 60000 },
+        { name: 'Coklat Bubuk', qty: 0.04, unit: 'kg', unitPrice: 80000 },
+        { name: 'Gula Pasir', qty: 0.2, unit: 'kg', unitPrice: 16000 },
+        { name: 'Mentega', qty: 0.15, unit: 'kg', unitPrice: 30000 },
+        { name: 'Kemasan & Label', qty: 1, unit: 'pcs', unitPrice: 3000 },
+        { name: 'Gas Oven', qty: 1, unit: 'porsi', unitPrice: 2000 }
+      ],
       active: true,
       isFavorite: true
     },
@@ -112,6 +295,16 @@ function getDefaultProducts() {
       category: 'Bolu Marble',
       price: 48000,
       costPrice: 21000,
+      hppIngredients: [
+        { name: 'Tepung Terigu', qty: 0.45, unit: 'kg', unitPrice: 14000 },
+        { name: 'Telur Ayam', qty: 5, unit: 'butir', unitPrice: 2500 },
+        { name: 'Gula Pasir', qty: 0.2, unit: 'kg', unitPrice: 16000 },
+        { name: 'Mentega', qty: 0.15, unit: 'kg', unitPrice: 30000 },
+        { name: 'Coklat Bubuk', qty: 0.02, unit: 'kg', unitPrice: 80000 },
+        { name: 'Vanili', qty: 1, unit: 'sdt', unitPrice: 500 },
+        { name: 'Kemasan & Label', qty: 1, unit: 'pcs', unitPrice: 2500 },
+        { name: 'Gas Oven', qty: 1, unit: 'porsi', unitPrice: 2000 }
+      ],
       active: true,
       isFavorite: true
     },
@@ -121,6 +314,16 @@ function getDefaultProducts() {
       category: 'Bolu Original',
       price: 42000,
       costPrice: 19000,
+      hppIngredients: [
+        { name: 'Tepung Terigu', qty: 0.4, unit: 'kg', unitPrice: 14000 },
+        { name: 'Pisang Raja', qty: 4, unit: 'buah', unitPrice: 1500 },
+        { name: 'Telur Ayam', qty: 4, unit: 'butir', unitPrice: 2500 },
+        { name: 'Gula Pasir', qty: 0.1, unit: 'kg', unitPrice: 16000 },
+        { name: 'Keju Parut', qty: 0.03, unit: 'kg', unitPrice: 80000 },
+        { name: 'Kismis', qty: 0.02, unit: 'kg', unitPrice: 60000 },
+        { name: 'Kemasan & Label', qty: 1, unit: 'pcs', unitPrice: 2500 },
+        { name: 'Gas Oven', qty: 1, unit: 'porsi', unitPrice: 2000 }
+      ],
       active: true,
       isFavorite: true
     },
@@ -130,6 +333,17 @@ function getDefaultProducts() {
       category: 'Bolu Pandan',
       price: 52000,
       costPrice: 23000,
+      hppIngredients: [
+        { name: 'Tepung Terigu', qty: 0.4, unit: 'kg', unitPrice: 14000 },
+        { name: 'Telur Ayam', qty: 6, unit: 'butir', unitPrice: 2500 },
+        { name: 'Gula Pasir', qty: 0.2, unit: 'kg', unitPrice: 16000 },
+        { name: 'Santan Kelapa', qty: 0.2, unit: 'liter', unitPrice: 20000 },
+        { name: 'Pasta Pandan', qty: 1, unit: 'sdt', unitPrice: 1500 },
+        { name: 'Minyak Goreng', qty: 0.08, unit: 'liter', unitPrice: 18000 },
+        { name: 'Cream of Tartar', qty: 0.5, unit: 'sdt', unitPrice: 2000 },
+        { name: 'Kemasan & Label', qty: 1, unit: 'pcs', unitPrice: 3000 },
+        { name: 'Gas Oven', qty: 1, unit: 'porsi', unitPrice: 2000 }
+      ],
       active: true,
       isFavorite: false
     },
@@ -139,6 +353,15 @@ function getDefaultProducts() {
       category: 'Kue Kering',
       price: 85000,
       costPrice: 42000,
+      hppIngredients: [
+        { name: 'Tepung Terigu', qty: 0.5, unit: 'kg', unitPrice: 14000 },
+        { name: 'Mentega Wisman', qty: 0.25, unit: 'kg', unitPrice: 40000 },
+        { name: 'Keju Edam', qty: 0.2, unit: 'kg', unitPrice: 120000 },
+        { name: 'Telur Ayam', qty: 3, unit: 'butir', unitPrice: 2500 },
+        { name: 'Maizena', qty: 0.05, unit: 'kg', unitPrice: 20000 },
+        { name: 'Toples Kemasan', qty: 1, unit: 'pcs', unitPrice: 5000 },
+        { name: 'Gas Oven', qty: 1, unit: 'porsi', unitPrice: 2500 }
+      ],
       active: true,
       isFavorite: false
     },
@@ -148,6 +371,16 @@ function getDefaultProducts() {
       category: 'Roti',
       price: 28000,
       costPrice: 12000,
+      hppIngredients: [
+        { name: 'Tepung Terigu Cakra', qty: 0.4, unit: 'kg', unitPrice: 16000 },
+        { name: 'Ragi Instan', qty: 1, unit: 'sdt', unitPrice: 1000 },
+        { name: 'Telur Ayam', qty: 1, unit: 'butir', unitPrice: 2500 },
+        { name: 'Mentega', qty: 0.05, unit: 'kg', unitPrice: 30000 },
+        { name: 'Gula Pasir', qty: 0.03, unit: 'kg', unitPrice: 16000 },
+        { name: 'Susu Bubuk', qty: 0.01, unit: 'kg', unitPrice: 60000 },
+        { name: 'Kemasan Plastik', qty: 1, unit: 'pcs', unitPrice: 1000 },
+        { name: 'Gas Oven', qty: 1, unit: 'porsi', unitPrice: 1500 }
+      ],
       active: true,
       isFavorite: false
     }
@@ -502,7 +735,79 @@ function getDefaultTransactions() {
  */
 class DataManager {
   constructor() {
+    this.isUsingDb = false;
+    this.dbInfo = null;
+    this.apiOrigin = null;
     this.init();
+    this.checkDatabaseConnection();
+  }
+
+  async checkDatabaseConnection() {
+    try {
+      const origin = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
+        ? window.location.origin
+        : 'http://localhost:5000';
+
+      const res = await fetch(`${origin}/api/status`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        this.isUsingDb = true;
+        this.apiOrigin = origin;
+        this.dbInfo = data;
+        await this.syncFromDatabase();
+        window.dispatchEvent(new CustomEvent('db-status-changed', { detail: { connected: true, info: data } }));
+        return true;
+      }
+    } catch (e) {
+      // Server not reachable
+    }
+    this.isUsingDb = false;
+    this.dbInfo = null;
+    window.dispatchEvent(new CustomEvent('db-status-changed', { detail: { connected: false } }));
+    return false;
+  }
+
+  async syncFromDatabase() {
+    if (!this.isUsingDb || !this.apiOrigin) return;
+    try {
+      const [trxsRes, prodsRes, ingsRes, logsRes, recsRes, profRes, setRes] = await Promise.all([
+        fetch(`${this.apiOrigin}/api/transactions`),
+        fetch(`${this.apiOrigin}/api/products`),
+        fetch(`${this.apiOrigin}/api/ingredients`),
+        fetch(`${this.apiOrigin}/api/stock_log`),
+        fetch(`${this.apiOrigin}/api/recurring`),
+        fetch(`${this.apiOrigin}/api/profile`),
+        fetch(`${this.apiOrigin}/api/settings`)
+      ]);
+
+      if (trxsRes.ok) localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(await trxsRes.json()));
+      if (prodsRes.ok) localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(await prodsRes.json()));
+      if (ingsRes.ok) localStorage.setItem(STORAGE_KEYS.INGREDIENTS, JSON.stringify(await ingsRes.json()));
+      if (logsRes.ok) localStorage.setItem(STORAGE_KEYS.STOCK_LOG, JSON.stringify(await logsRes.json()));
+      if (recsRes.ok) localStorage.setItem(STORAGE_KEYS.RECURRING, JSON.stringify(await recsRes.json()));
+      if (profRes.ok) localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(await profRes.json()));
+      if (setRes.ok) localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(await setRes.json()));
+
+      console.log('✅ Berhasil tersinkronisasi dengan Database SQLite (bolu_bu_eko.db)');
+    } catch (e) {
+      console.warn('Sync from database error:', e);
+    }
+  }
+
+  async _apiCall(path, method = 'POST', body = null) {
+    if (!this.isUsingDb || !this.apiOrigin) return null;
+    try {
+      const opts = {
+        method,
+        headers: { 'Content-Type': 'application/json' }
+      };
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch(`${this.apiOrigin}${path}`, opts);
+      return res.ok ? await res.json() : null;
+    } catch (e) {
+      console.warn('API Call failed:', path, e);
+      return null;
+    }
   }
 
   init() {
@@ -520,6 +825,12 @@ class DataManager {
     }
     if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
       this.saveSettings(DEFAULT_SETTINGS);
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.INGREDIENTS)) {
+      this.saveIngredients(getDefaultIngredients());
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.STOCK_LOG)) {
+      this.saveStockLog(getDefaultStockLog());
     }
   }
 
@@ -581,6 +892,7 @@ class DataManager {
     };
     list.unshift(newTrx);
     this.saveTransactions(list);
+    this._apiCall('/api/transactions', 'POST', newTrx);
     return newTrx;
   }
 
@@ -590,6 +902,7 @@ class DataManager {
     if (idx !== -1) {
       list[idx] = { ...list[idx], ...updatedData, updatedAt: new Date().toISOString() };
       this.saveTransactions(list);
+      this._apiCall(`/api/transactions/${id}`, 'PUT', list[idx]);
       return list[idx];
     }
     return null;
@@ -600,6 +913,7 @@ class DataManager {
     const beforeLen = list.length;
     list = list.filter(t => t.id !== id);
     this.saveTransactions(list);
+    this._apiCall(`/api/transactions/${id}`, 'DELETE');
     return list.length < beforeLen;
   }
 
@@ -633,10 +947,12 @@ class DataManager {
       id: 'prod_' + Date.now(),
       active: true,
       isFavorite: false,
+      hppIngredients: [],
       ...data
     };
     list.push(newProd);
     this.saveProducts(list);
+    this._apiCall('/api/products', 'POST', newProd);
     return newProd;
   }
 
@@ -646,6 +962,7 @@ class DataManager {
     if (idx !== -1) {
       list[idx] = { ...list[idx], ...updatedData };
       this.saveProducts(list);
+      this._apiCall(`/api/products/${id}`, 'PUT', list[idx]);
       return list[idx];
     }
     return null;
@@ -656,6 +973,7 @@ class DataManager {
     const beforeLen = list.length;
     list = list.filter(p => p.id !== id);
     this.saveProducts(list);
+    this._apiCall(`/api/products/${id}`, 'DELETE');
     return list.length < beforeLen;
   }
 
@@ -665,6 +983,169 @@ class DataManager {
       return this.updateProduct(id, { isFavorite: !prod.isFavorite });
     }
     return null;
+  }
+
+  // --- Master Bahan (Ingredients) ---
+  getIngredients(onlyActive = false) {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.INGREDIENTS);
+      let list = raw ? JSON.parse(raw) : [];
+      if (onlyActive) {
+        list = list.filter(i => i.active !== false);
+      }
+      return list;
+    } catch (e) {
+      console.error('Error getting ingredients:', e);
+      return [];
+    }
+  }
+
+  getIngredientById(id) {
+    const list = this.getIngredients();
+    return list.find(i => i.id === id) || null;
+  }
+
+  findIngredientByName(name) {
+    const list = this.getIngredients();
+    return list.find(i => i.name.toLowerCase() === name.toLowerCase()) || null;
+  }
+
+  saveIngredients(ingredients) {
+    localStorage.setItem(STORAGE_KEYS.INGREDIENTS, JSON.stringify(ingredients));
+  }
+
+  addIngredient(data) {
+    const list = this.getIngredients();
+    const newIng = {
+      id: 'ing_' + Date.now(),
+      stock: 0,
+      minStock: 0,
+      active: true,
+      ...data
+    };
+    list.push(newIng);
+    this.saveIngredients(list);
+    this._apiCall('/api/ingredients', 'POST', newIng);
+    return newIng;
+  }
+
+  updateIngredient(id, updatedData) {
+    const list = this.getIngredients();
+    const idx = list.findIndex(i => i.id === id);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...updatedData };
+      this.saveIngredients(list);
+      this._apiCall(`/api/ingredients/${id}`, 'PUT', list[idx]);
+      return list[idx];
+    }
+    return null;
+  }
+
+  deleteIngredient(id) {
+    let list = this.getIngredients();
+    const beforeLen = list.length;
+    list = list.filter(i => i.id !== id);
+    this.saveIngredients(list);
+    this._apiCall(`/api/ingredients/${id}`, 'DELETE');
+    return list.length < beforeLen;
+  }
+
+  // --- Stock Management ---
+  getStockLog(filter = {}) {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.STOCK_LOG);
+      let log = raw ? JSON.parse(raw) : [];
+      if (filter.ingredientId) {
+        log = log.filter(l => l.ingredientId === filter.ingredientId);
+      }
+      if (filter.type) {
+        log = log.filter(l => l.type === filter.type);
+      }
+      log.sort((a, b) => new Date(b.date) - new Date(a.date));
+      return log;
+    } catch (e) {
+      console.error('Error getting stock log:', e);
+      return [];
+    }
+  }
+
+  saveStockLog(log) {
+    localStorage.setItem(STORAGE_KEYS.STOCK_LOG, JSON.stringify(log));
+  }
+
+  /**
+   * Adjust stock for an ingredient.
+   * @param {string} ingredientId
+   * @param {'in'|'out'} type - 'in' for purchases, 'out' for production usage
+   * @param {number} qty - quantity to add or subtract
+   * @param {number} unitPrice - price per unit
+   * @param {string} date
+   * @param {string} reference - linked transaction ID or description
+   * @param {string} notes
+   */
+  adjustStock(ingredientId, type, qty, unitPrice, date, reference, notes) {
+    const ingredient = this.getIngredientById(ingredientId);
+    if (!ingredient) return null;
+
+    // Update stock quantity
+    let newStock;
+    if (type === 'in') {
+      newStock = (ingredient.stock || 0) + qty;
+      // Update last purchase price
+      this.updateIngredient(ingredientId, {
+        stock: newStock,
+        lastPrice: unitPrice > 0 ? unitPrice : ingredient.lastPrice
+      });
+    } else {
+      newStock = Math.max(0, (ingredient.stock || 0) - qty);
+      this.updateIngredient(ingredientId, { stock: newStock });
+    }
+
+    // Add to stock log
+    const log = this.getStockLog();
+    const entry = {
+      id: 'slog_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+      ingredientId,
+      ingredientName: ingredient.name,
+      type,
+      qty,
+      unit: ingredient.unit,
+      unitPrice: unitPrice || ingredient.lastPrice,
+      totalPrice: qty * (unitPrice || ingredient.lastPrice),
+      date: date || new Date().toISOString().split('T')[0],
+      reference: reference || '',
+      notes: notes || ''
+    };
+    log.push(entry);
+    this.saveStockLog(log);
+
+    // Sync to SQLite database
+    this._apiCall('/api/adjust_stock', 'POST', {
+      ingredientId,
+      type,
+      qty,
+      unitPrice: unitPrice || ingredient.lastPrice,
+      date: date || new Date().toISOString().split('T')[0],
+      reference,
+      notes
+    });
+
+    return { ingredient: this.getIngredientById(ingredientId), logEntry: entry };
+  }
+
+  /**
+   * Get ingredients with low stock (below minimum)
+   */
+  getLowStockIngredients() {
+    return this.getIngredients(true).filter(i => i.stock <= i.minStock);
+  }
+
+  /**
+   * Get total inventory value
+   */
+  getInventoryValue() {
+    const ingredients = this.getIngredients(true);
+    return ingredients.reduce((sum, i) => sum + ((i.stock || 0) * (i.lastPrice || 0)), 0);
   }
 
   // --- Recurring Expenses ---
@@ -689,6 +1170,7 @@ class DataManager {
     };
     list.push(item);
     this.saveRecurring(list);
+    this._apiCall('/api/recurring', 'POST', item);
     return item;
   }
 
@@ -698,6 +1180,7 @@ class DataManager {
     if (idx !== -1) {
       list[idx] = { ...list[idx], ...data };
       this.saveRecurring(list);
+      this._apiCall(`/api/recurring/${id}`, 'PUT', list[idx]);
       return list[idx];
     }
     return null;
@@ -707,6 +1190,7 @@ class DataManager {
     let list = this.getRecurring();
     list = list.filter(r => r.id !== id);
     this.saveRecurring(list);
+    this._apiCall(`/api/recurring/${id}`, 'DELETE');
   }
 
   // Quick Apply Recurring Expenses to Current Month Transactions
@@ -740,6 +1224,7 @@ class DataManager {
 
   saveProfile(profile) {
     localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile));
+    this._apiCall('/api/profile', 'POST', profile);
   }
 
   getSettings() {
@@ -753,6 +1238,7 @@ class DataManager {
 
   saveSettings(settings) {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    this._apiCall('/api/settings', 'POST', settings);
   }
 
   // --- Analytical Calculations ---
@@ -945,11 +1431,20 @@ class DataManager {
       settings: this.getSettings(),
       products: this.getProducts(),
       transactions: this.getTransactions(),
-      recurring: this.getRecurring()
+      recurring: this.getRecurring(),
+      ingredients: this.getIngredients(),
+      stockLog: this.getStockLog()
     };
   }
 
   importAllData(importedData) {
+    if (typeof importedData === 'string') {
+      try {
+        importedData = JSON.parse(importedData);
+      } catch (e) {
+        throw new Error('Format data JSON tidak valid');
+      }
+    }
     if (!importedData || typeof importedData !== 'object') {
       throw new Error('Format data JSON tidak valid');
     }
@@ -962,22 +1457,44 @@ class DataManager {
     if (importedData.products) this.saveProducts(importedData.products);
     if (importedData.transactions) this.saveTransactions(importedData.transactions);
     if (importedData.recurring) this.saveRecurring(importedData.recurring);
+    if (importedData.ingredients && Array.isArray(importedData.ingredients)) {
+      this.saveIngredients(importedData.ingredients);
+    }
+    if (importedData.stockLog && Array.isArray(importedData.stockLog)) {
+      this.saveStockLog(importedData.stockLog);
+    }
+
+    // Sync full import to SQLite if connected
+    this._apiCall('/api/import', 'POST', importedData);
 
     return true;
   }
 
-  resetToSampleData() {
+  resetToDefaults() {
     this.saveProducts(getDefaultProducts());
     this.saveTransactions(getDefaultTransactions());
     this.saveRecurring(getDefaultRecurringExpenses());
     this.saveProfile(DEFAULT_PROFILE);
     this.saveSettings(DEFAULT_SETTINGS);
+    this.saveIngredients(getDefaultIngredients());
+    this.saveStockLog(getDefaultStockLog());
+
+    // Reset SQLite database as well
+    this._apiCall('/api/reset', 'POST');
+  }
+
+  resetToSampleData() {
+    this.resetToDefaults();
   }
 
   clearAllData() {
     this.saveProducts([]);
     this.saveTransactions([]);
     this.saveRecurring([]);
+    this.saveIngredients([]);
+    this.saveStockLog([]);
+    localStorage.removeItem(STORAGE_KEYS.INGREDIENTS);
+    localStorage.removeItem(STORAGE_KEYS.STOCK_LOG);
   }
 }
 
@@ -1051,3 +1568,4 @@ window.Utils = Utils;
 window.PRODUCT_CATEGORIES = PRODUCT_CATEGORIES;
 window.EXPENSE_CATEGORIES = EXPENSE_CATEGORIES;
 window.PAYMENT_METHODS = PAYMENT_METHODS;
+window.INGREDIENT_CATEGORIES = INGREDIENT_CATEGORIES;
